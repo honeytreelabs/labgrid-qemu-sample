@@ -13,17 +13,20 @@
 # limitations under the License.
 
 import pytest
+from labgrid import Target
+from labgrid.driver import ShellDriver, SSHDriver
+from labgrid.strategy import Strategy
 
 
 @pytest.fixture
-def shell_command(target, strategy):
+def shell_command(target: Target, strategy: Strategy) -> ShellDriver:
     strategy.transition("shell")
     shell = target.get_driver("ShellDriver")
     return shell
 
 
 @pytest.fixture
-def ssh_command(target, strategy):
+def ssh_command(target: Target, strategy: Strategy) -> SSHDriver:
     strategy.transition("shell")
     ssh = target.get_driver("SSHDriver")
     return ssh

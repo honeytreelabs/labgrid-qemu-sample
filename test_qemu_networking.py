@@ -13,11 +13,22 @@
 # limitations under the License.
 import logging
 
-
-def test_shell(shell_command):
-    shell_command.run("true")
-    logging.info("\n".join(shell_command.run_check("uname -a")))
+from labgrid.driver import ShellDriver, SSHDriver
 
 
-def test_ssh(ssh_command):
+def run(shell: ShellDriver | SSHDriver, cmd: str) -> str:
+    return "\n".join(shell.run_check(cmd))
+
+
+def test_shell(shell_command: ShellDriver):
+    run(shell_command, "true")
+
+    logging.info(run(shell_command, "uname -a"))
+
+    assert run(shell_command, "uname -n") == "OpenWrt"
+    assert run(shell_command, "uname -s") == "Linux"
+    assert run(shell_command, "uname -m") == "x86_64"
+
+
+def test_ssh(ssh_command: SSHDriver):
     ssh_command.run("true")
