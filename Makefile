@@ -4,7 +4,7 @@ IMAGE_URL := https://downloads.openwrt.org/releases/23.05.4/targets/x86/64/openw
 all: test
 
 test: $(IMAGE)
-	pytest -vv --lg-env local.yaml -k shell
+	pytest -vv --lg-env config/local.yaml -k shell
 
 download: $(IMAGE)
 
