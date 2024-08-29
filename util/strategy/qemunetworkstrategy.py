@@ -13,11 +13,15 @@
 # limitations under the License.
 
 import enum
+import time
+from typing import Optional
 
 import attr
 from labgrid import step, target_factory
+from labgrid.driver import QEMUDriver, ShellDriver, SSHDriver
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
+from process import run
 
 
 class Status(enum.Enum):
@@ -35,10 +39,15 @@ class QEMUNetworkStrategy(Strategy):
         "ssh": "SSHDriver",
     }
 
+    qemu: Optional[QEMUDriver] = None
+    shell: Optional[ShellDriver] = None
+    ssh: Optional[SSHDriver] = None
+
     status = attr.ib(default=Status.unknown)
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
+        assert self.ssh
         self.__port_forward = None
         self.__remote_port = self.ssh.networkservice.port
 
@@ -89,13 +98,22 @@ class QEMUNetworkStrategy(Strategy):
             return
 
         if state == Status.off:
+            assert self.target
             self.target.activate(self.qemu)
+            assert self.qemu
             self.qemu.off()
 
         elif state == Status.shell:
+            assert self.target
             self.target.activate(self.qemu)
+            assert self.qemu
             self.qemu.on()
             self.target.activate(self.shell)
-            # self.update_network_service()
+            assert self.shell
+            run(self.shell, "uci set network.lan.proto=dhcp")
+            run(self.shell, "uci commit network")
+            run(self.shell, "/etc/init.d/network restart")
+            time.sleep(1)
+            self.update_network_service()
 
         self.status = state

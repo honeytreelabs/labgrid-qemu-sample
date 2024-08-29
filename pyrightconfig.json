@@ -1,6 +1,6 @@
 {
   "extraPaths": [
-    "lib",
+    "util",
     "tests"
   ]
 }

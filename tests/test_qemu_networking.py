@@ -14,10 +14,7 @@
 import logging
 
 from labgrid.driver import ShellDriver, SSHDriver
-
-
-def run(shell: ShellDriver | SSHDriver, cmd: str) -> str:
-    return "\n".join(shell.run_check(cmd))
+from process import run
 
 
 def test_shell(shell_command: ShellDriver):
@@ -31,4 +28,10 @@ def test_shell(shell_command: ShellDriver):
 
 
 def test_ssh(ssh_command: SSHDriver):
-    ssh_command.run("true")
+    run(ssh_command, "true")
+
+    logging.info(run(ssh_command, "uname -a"))
+
+    assert run(ssh_command, "uname -n") == "OpenWrt"
+    assert run(ssh_command, "uname -s") == "Linux"
+    assert run(ssh_command, "uname -m") == "x86_64"
