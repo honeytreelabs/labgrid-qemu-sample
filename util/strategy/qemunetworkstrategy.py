@@ -13,10 +13,13 @@
 # limitations under the License.
 
 import enum
+import subprocess
 import time
+from pathlib import Path
 from typing import Optional
 
 import attr
+import requests
 from labgrid import step, target_factory
 from labgrid.driver import QEMUDriver, ShellDriver, SSHDriver
 from labgrid.strategy import Strategy, StrategyError
@@ -48,8 +51,40 @@ class QEMUNetworkStrategy(Strategy):
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
         assert self.ssh
+
+        self._download_image()
+
         self.__port_forward = None
         self.__remote_port = self.ssh.networkservice.port
+
+    @step()
+    def _download_image(self) -> None:
+        url = self.target.env.config.data["urls"]["disk-image"]
+        if not self.qemu.disk:
+            raise NotImplementedError(
+                "Disk image has not been configured for QEMUDriver."
+            )
+        disk_path = Path(self.target.env.config.get_image_path(self.qemu.disk))
+        if disk_path.exists():
+            return
+        response = requests.get(url)
+        response.raise_for_status()
+        # using gunzip to extract the image as it is more robust than Python's built-in gzip module
+        with open(disk_path, "wb") as output_file:
+            # Create a subprocess for gunzip
+            gunzip_process = subprocess.Popen(
+                ["gunzip"],
+                stdin=subprocess.PIPE,
+                stdout=output_file,
+                stderr=subprocess.PIPE,
+            )
+
+            # Send the response content to the gunzip process's stdin
+            gunzip_process.stdin.write(response.content)
+            gunzip_process.stdin.close()
+
+            # Wait for the gunzip process to complete
+            gunzip_process.wait()
 
     @step(result=True)
     def get_remote_address(self):
