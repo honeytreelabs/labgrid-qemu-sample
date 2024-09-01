@@ -14,17 +14,17 @@
 
 import enum
 import subprocess
-import time
 from pathlib import Path
 from typing import Optional
 
 import attr
 import requests
+import service
+import uci
 from labgrid import step, target_factory
 from labgrid.driver import QEMUDriver, ShellDriver, SSHDriver
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
-from process import run
 
 
 class Status(enum.Enum):
@@ -145,10 +145,10 @@ class QEMUNetworkStrategy(Strategy):
             self.qemu.on()
             self.target.activate(self.shell)
             assert self.shell
-            run(self.shell, "uci set network.lan.proto=dhcp")
-            run(self.shell, "uci commit network")
-            run(self.shell, "/etc/init.d/network restart")
-            time.sleep(1)
+
+            uci.set(self.shell, "network.lan.proto", "dhcp")
+            uci.commit(self.shell, "network")
+            service.restart(self.shell, "network", wait=1)
             self.update_network_service()
 
         self.status = state
