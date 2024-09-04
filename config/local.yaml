@@ -22,7 +22,8 @@ targets:
         username: 'root'
         prompt: 'root@OpenWrt:[^ ]+# '
         login_timeout: 200
-    - SSHDriver: {}
+    - SSHDriver:
+        explicit_scp_mode: true
     - QEMUNetworkStrategy: {}
 
 tools:

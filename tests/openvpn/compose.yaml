@@ -1,0 +1,27 @@
+---
+services:
+  openvpn-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.openvpn
+    command:
+    - /bin/bash
+    - -c
+    - |
+      mkdir -p /dev/net
+      mknod /dev/net/tun c 10 200
+      chmod 600 /dev/net/tun
+      openvpn --mode server --tls-server \
+          --dev tun --server 172.87.0.0 255.255.255.0 \
+          --dh none --ca /ca_cert.pem --cert /server_cert.pem --key /server_key.pem \
+          --cipher AES-256-CBC --auth SHA256 \
+          --ping 1 --ping-restart 6 \
+          --push "ping 1" --push "ping-restart 6"
+    cap_add:
+    - NET_ADMIN
+    ports:
+    - "1194:1194/udp"
+    volumes:
+    - ./ca_cert.pem:/ca_cert.pem
+    - ./server_cert.pem:/server_cert.pem
+    - ./server_key.pem:/server_key.pem
