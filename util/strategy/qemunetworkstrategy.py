@@ -13,7 +13,10 @@
 # limitations under the License.
 
 import enum
+import logging
+import os
 import subprocess
+import urllib.parse
 from pathlib import Path
 from typing import Optional
 
@@ -52,26 +55,48 @@ class QEMUNetworkStrategy(Strategy):
         super().__attrs_post_init__()
         assert self.ssh
 
-        self._download_image()
+        self._download_image()  # keep .gz image
+        self._extract_image()  # overwrite image if existing
 
         self.__port_forward = None
         self.__remote_port = self.ssh.networkservice.port
 
-    @step()
-    def _download_image(self) -> None:
-        url = self.target.env.config.data["urls"]["disk-image"]
+    @property
+    def disk_url(self) -> str:
+        return self.target.env.config.data["urls"]["disk-image"]
+
+    @property
+    def disk_path(self) -> Path:
         if not self.qemu.disk:
             raise NotImplementedError(
                 "Disk image has not been configured for QEMUDriver."
             )
-        disk_path = Path(self.target.env.config.get_image_path(self.qemu.disk))
-        if disk_path.exists():
+        return Path(self.target.env.config.get_image_path(self.qemu.disk)).resolve()
+
+    @property
+    def compressed_disk_path(self) -> Path:
+        return self.disk_path.parent / os.path.basename(
+            urllib.parse.urlparse(self.disk_url).path
+        )
+
+    @step()
+    def _download_image(self) -> None:
+        if self.compressed_disk_path.exists():
+            logging.info(
+                f"Image {self.compressed_disk_path} already exists. Skipping download."
+            )
             return
-        response = requests.get(url)
+        response = requests.get(self.disk_url)
         response.raise_for_status()
+        self.compressed_disk_path.write_bytes(response.content)
+
+    @step()
+    def _extract_image(self) -> None:
         # using gunzip to extract the image as it is more robust than Python's built-in gzip module
-        with open(disk_path, "wb") as output_file:
-            # Create a subprocess for gunzip
+        logging.info(
+            f"Extracting {self.compressed_disk_path.name} to {self.disk_path.name}."
+        )
+        with open(self.disk_path, "wb") as output_file:
             gunzip_process = subprocess.Popen(
                 ["gunzip"],
                 stdin=subprocess.PIPE,
@@ -79,11 +104,10 @@ class QEMUNetworkStrategy(Strategy):
                 stderr=subprocess.PIPE,
             )
 
-            # Send the response content to the gunzip process's stdin
-            gunzip_process.stdin.write(response.content)
+            assert gunzip_process.stdin
+            gunzip_process.stdin.write(self.compressed_disk_path.read_bytes())
             gunzip_process.stdin.close()
 
-            # Wait for the gunzip process to complete
             gunzip_process.wait()
 
     @step(result=True)
