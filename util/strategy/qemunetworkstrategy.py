@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Optional
 
 import attr
-import requests
+import httpx
 import service
 import uci
 from labgrid import step, target_factory
@@ -86,7 +86,7 @@ class QEMUNetworkStrategy(Strategy):
                 f"Image {self.compressed_disk_path} already exists. Skipping download."
             )
             return
-        response = requests.get(self.disk_url)
+        response = httpx.get(self.disk_url)
         response.raise_for_status()
         self.compressed_disk_path.write_bytes(response.content)
 
