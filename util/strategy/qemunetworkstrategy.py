@@ -16,6 +16,7 @@ import enum
 import logging
 import os
 import subprocess
+import time
 import urllib.parse
 from pathlib import Path
 from typing import Optional
@@ -116,6 +117,8 @@ class QEMUNetworkStrategy(Strategy):
 
     @step()
     def update_network_service(self):
+        if not "accel kvm" in self.qemu.extra_args:
+            time.sleep(5)  # wait for device to acquire IP address
         new_address = self.get_remote_address()
         networkservice = self.ssh.networkservice
 
