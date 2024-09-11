@@ -69,23 +69,17 @@ class QEMUNetworkStrategy(Strategy):
     @property
     def disk_path(self) -> Path:
         if not self.qemu.disk:
-            raise NotImplementedError(
-                "Disk image has not been configured for QEMUDriver."
-            )
+            raise NotImplementedError("Disk image has not been configured for QEMUDriver.")
         return Path(self.target.env.config.get_image_path(self.qemu.disk)).resolve()
 
     @property
     def compressed_disk_path(self) -> Path:
-        return self.disk_path.parent / os.path.basename(
-            urllib.parse.urlparse(self.disk_url).path
-        )
+        return self.disk_path.parent / os.path.basename(urllib.parse.urlparse(self.disk_url).path)
 
     @step()
     def _download_image(self) -> None:
         if self.compressed_disk_path.exists():
-            logging.info(
-                f"Image {self.compressed_disk_path} already exists. Skipping download."
-            )
+            logging.info(f"Image {self.compressed_disk_path} already exists. Skipping download.")
             return
         response = httpx.get(self.disk_url)
         response.raise_for_status()
@@ -94,9 +88,7 @@ class QEMUNetworkStrategy(Strategy):
     @step()
     def _extract_image(self) -> None:
         # using gunzip to extract the image as it is more robust than Python's built-in gzip module
-        logging.info(
-            f"Extracting {self.compressed_disk_path.name} to {self.disk_path.name}."
-        )
+        logging.info(f"Extracting {self.compressed_disk_path.name} to {self.disk_path.name}.")
         with open(self.disk_path, "wb") as output_file:
             gunzip_process = subprocess.Popen(
                 ["gunzip"],

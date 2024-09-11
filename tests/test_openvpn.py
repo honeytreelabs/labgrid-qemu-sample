@@ -47,10 +47,7 @@ def test_openvpn(
         ssh_command.put(str(OPENVPN_DIR / "client_cert.pem"), "/etc/openvpn/client.crt")
         ssh_command.put(str(OPENVPN_DIR / "client_key.pem"), "/etc/openvpn/client.key")
         run(ssh_command, "uci set openvpn.sample_client.enabled='1'")
-        run(
-            ssh_command,
-            f"uci set openvpn.sample_client.remote='{primary_host_ip()} 1194'",
-        )
+        run(ssh_command, f"uci set openvpn.sample_client.remote='{primary_host_ip()} 1194'")
         run(ssh_command, "uci commit openvpn")
         run(ssh_command, "/etc/init.d/openvpn start sample_client")
 

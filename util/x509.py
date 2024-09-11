@@ -11,9 +11,7 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
 
 def generate_private_key() -> rsa.RSAPrivateKey:
-    return rsa.generate_private_key(
-        public_exponent=65537, key_size=2048, backend=default_backend()
-    )
+    return rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
 
 
 def create_certificate(
@@ -56,9 +54,7 @@ def create_certificate(
         .not_valid_after(now + datetime.timedelta(days=3650))  # 10 years validity
     )
 
-    cert_builder = cert_builder.add_extension(
-        x509.BasicConstraints(ca=is_ca, path_length=None), critical=True
-    )
+    cert_builder = cert_builder.add_extension(x509.BasicConstraints(ca=is_ca, path_length=None), critical=True)
 
     ekus = []
     if is_server_cert:

@@ -25,9 +25,7 @@ class DockerComposeWrapper:
             args.append("-d")
         self._run_command(*args)
 
-    def rm(
-        self, force: bool = False, stop: bool = False, volumes: bool = False
-    ) -> None:
+    def rm(self, force: bool = False, stop: bool = False, volumes: bool = False) -> None:
         args = ["rm"]
         if force:
             args.append("-f")

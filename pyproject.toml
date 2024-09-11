@@ -7,3 +7,6 @@ dependencies = [
   "labgrid @ git+https://github.com/labgrid-project/labgrid.git@85509188ecdc710079591e50269cfba2eb67fde1",
   "ipdb==0.13.13",
 ]
+
+[tool.ruff]
+line-length = 120
