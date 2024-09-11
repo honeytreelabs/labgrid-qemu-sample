@@ -2,6 +2,8 @@ import subprocess
 
 from labgrid.driver import ShellDriver, SSHDriver
 
+Runner = ShellDriver | SSHDriver
+
 
 def bash_run(cmd: str) -> str:
     completed_process = subprocess.run(
@@ -15,5 +17,5 @@ def bash_run(cmd: str) -> str:
     return completed_process.stdout
 
 
-def run(shell: ShellDriver | SSHDriver, cmd: str) -> str:
+def run(shell: Runner, cmd: str) -> str:
     return "\n".join(shell.run_check(cmd))
