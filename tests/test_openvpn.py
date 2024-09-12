@@ -27,7 +27,7 @@ def generated_pki() -> PKI:
 def openvpn_server_env(generated_pki: PKI) -> Iterator[DockerComposeWrapper]:
     del generated_pki  # unused
 
-    compose = DockerComposeWrapper(Path(__file__).parent / "openvpn" / "compose.yaml")
+    compose = DockerComposeWrapper(OPENVPN_DIR / "compose.yaml")
     compose.up()
     yield compose
     compose.rm(force=True, stop=True)
