@@ -10,3 +10,66 @@ dependencies = [
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["I"]
+extend-safe-fixes = ["I"]
+
+# First iteration just enable a common set
+select = [
+    #"ALL",
+    # pycodestyle
+    "E",
+    # pydocstyle
+    #"D",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flage8-annotations
+    "ANN",
+    # flake8-bugbear
+    "B",
+    # flake8-bandit
+    "S",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+ignore = [
+    # line-too-long (E501)#
+    # https://docs.astral.sh/ruff/rules/line-too-long/
+    "E501",
+    # Checks for packages that are missing an __init__.py file.
+    # https://docs.astral.sh/ruff/rules/implicit-namespace-package/
+    "INP001",
+    # Checks for undocumented public module definitions.
+    # https://docs.astral.sh/ruff/rules/undocumented-public-module
+    "D100",
+    # bad-quotes-inline-string (Q000)#
+    # https://docs.astral.sh/ruff/rules/bad-quotes-inline-string/
+    "Q000",
+    # too-many-arguments (PLR0913)
+    # https://docs.astral.sh/ruff/rules/too-many-arguments/
+    "PLR0913",
+    # missing-type-self (ANN101)# - DEPRECATED, hence ignored
+    # https://docs.astral.sh/ruff/rules/missing-type-self/
+    "ANN101",
+    # assert (S101)#
+    # https://docs.astral.sh/ruff/rules/assert/
+    # Reason: pytest uses assertions
+    "S101",
+    # subprocess-without-shell-equals-true (S603
+    # https://docs.astral.sh/ruff/rules/subprocess-without-shell-equals-true/
+    # Reason: Conflicts with S602 and using inside test
+    "S603",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint.flake8-pytest-style]
+# Ignore missing '()' at marker without args.
+# https://docs.astral.sh/ruff/settings/#lint_flake8-pytest-style_mark-parentheses
+mark-parentheses = false

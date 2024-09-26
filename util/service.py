@@ -2,7 +2,6 @@ import time
 from typing import Optional
 
 from labgrid.driver import ShellDriver, SSHDriver
-
 from process import run
 
 

@@ -27,6 +27,7 @@ import service
 import uci
 from labgrid import step, target_factory
 from labgrid.driver import QEMUDriver, ShellDriver, SSHDriver
+from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
 
@@ -53,7 +54,7 @@ class QEMUNetworkStrategy(Strategy):
 
     status = attr.ib(default=Status.unknown)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
         assert self.ssh
 
@@ -92,7 +93,7 @@ class QEMUNetworkStrategy(Strategy):
         logging.info(f"Extracting {self.compressed_disk_path.name} to {self.disk_path.name}.")
         with open(self.disk_path, "wb") as output_file:
             gunzip_process = subprocess.Popen(
-                ["gunzip"],
+                ["/usr/bin/gunzip"],
                 stdin=subprocess.PIPE,
                 stdout=output_file,
                 stderr=subprocess.PIPE,
@@ -105,12 +106,12 @@ class QEMUNetworkStrategy(Strategy):
             gunzip_process.wait()
 
     @step(result=True)
-    def get_remote_address(self):
+    def get_remote_address(self) -> str:
         return str(self.shell.get_ip_addresses()[0].ip)
 
     @step()
-    def update_network_service(self):
-        if not "accel kvm" in self.qemu.extra_args:
+    def update_network_service(self) -> None:
+        if "accel kvm" not in self.qemu.extra_args:
             time.sleep(5)  # wait for device to acquire IP address
         new_address = self.get_remote_address()
         networkservice = self.ssh.networkservice
@@ -141,7 +142,7 @@ class QEMUNetworkStrategy(Strategy):
                 networkservice.port = self.__remote_port
 
     @step(args=["state"])
-    def transition(self, state, *, step):
+    def transition(self, state: Status | str, *, step: Step) -> None:
         if not isinstance(state, Status):
             state = Status[state]
 

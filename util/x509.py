@@ -89,12 +89,12 @@ def cert_to_bytes(certificate: Certificate) -> bytes:
 
 
 # Helper function to save private keys and certificates
-def save_private_key(private_key: rsa.RSAPrivateKey, filename: Path):
+def save_private_key(private_key: rsa.RSAPrivateKey, filename: Path) -> None:
     with open(filename, "wb") as f:
         f.write(private_key_to_bytes(private_key))
 
 
-def save_certificate(certificate: Certificate, filename: Path):
+def save_certificate(certificate: Certificate, filename: Path) -> None:
     with open(filename, "wb") as f:
         f.write(cert_to_bytes(certificate))
 

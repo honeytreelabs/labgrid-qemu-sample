@@ -17,7 +17,7 @@ from labgrid.driver import ShellDriver, SSHDriver
 from process import run
 
 
-def test_shell(shell_command: ShellDriver):
+def test_shell(shell_command: ShellDriver) -> None:
     run(shell_command, "true")
 
     logging.info(run(shell_command, "uname -a"))
@@ -27,7 +27,7 @@ def test_shell(shell_command: ShellDriver):
     assert run(shell_command, "uname -m") == "x86_64"
 
 
-def test_ssh(ssh_command: SSHDriver):
+def test_ssh(ssh_command: SSHDriver) -> None:
     run(ssh_command, "true")
 
     logging.info(run(ssh_command, "uname -a"))

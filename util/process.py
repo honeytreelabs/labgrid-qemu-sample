@@ -6,7 +6,8 @@ Runner = ShellDriver | SSHDriver
 
 
 def bash_run(cmd: str) -> str:
-    completed_process = subprocess.run(
+    # we explicitly want to run code in a bash shell
+    completed_process = subprocess.run(  # noqa: S602
         cmd,
         check=True,
         shell=True,
