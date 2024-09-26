@@ -4,8 +4,9 @@ dynamic = ["version"]
 dependencies = [
   "httpx",
   "pytest==8.3.3",
-  "labgrid @ git+https://github.com/labgrid-project/labgrid.git@85509188ecdc710079591e50269cfba2eb67fde1",
+  "labgrid @ git+https://github.com/labgrid-project/labgrid.git@master",
   "ipdb==0.13.13",
+  "ruff==0.6.8",
 ]
 
 [tool.ruff]
