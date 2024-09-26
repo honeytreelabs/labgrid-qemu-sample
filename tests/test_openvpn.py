@@ -12,7 +12,7 @@ from x509 import PKI, create_pki
 OPENVPN_DIR = Path(__file__).parent / "openvpn"
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def generated_pki() -> PKI:
     pki = create_pki()
     (OPENVPN_DIR / "ca_cert.pem").write_bytes(pki.ca_cert)
@@ -23,7 +23,7 @@ def generated_pki() -> PKI:
     return pki
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def openvpn_server_env(generated_pki: PKI) -> Iterator[DockerComposeWrapper]:
     del generated_pki  # unused
 

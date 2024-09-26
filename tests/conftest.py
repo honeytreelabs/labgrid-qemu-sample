@@ -18,13 +18,13 @@ from labgrid.driver import ShellDriver, SSHDriver
 from labgrid.strategy import Strategy
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def shell_command(target: Target, strategy: Strategy) -> ShellDriver:
     strategy.transition("shell")
     return target.get_driver("ShellDriver")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ssh_command(target: Target, strategy: Strategy) -> SSHDriver:
     strategy.transition("ssh")
     return target.get_driver("SSHDriver")
