@@ -27,7 +27,7 @@ targets:
     - QEMUNetworkStrategy: {}
 
 tools:
-  qemu-amd64: /usr/bin/qemu-system-amd64
+  qemu-amd64: /usr/bin/qemu-system-x86_64
 
 images:
   disk-image: ../openwrt.img
