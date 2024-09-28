@@ -1,0 +1,16 @@
+---
+services:
+  debian:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    command: tail -f /dev/null
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - .:/workspace
+    networks:
+    - shared_network
+
+networks:
+  shared_network:
+    name: shared_network

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Iterator
 
@@ -5,7 +6,7 @@ import openwrt
 import pytest
 from docker import DockerComposeWrapper
 from labgrid.driver import SSHDriver
-from network import primary_host_ip
+from network import NetworkError, primary_host_ip, resolve
 from process import run
 from x509 import PKI, create_pki
 
@@ -28,14 +29,14 @@ def openvpn_server_env(generated_pki: PKI) -> Iterator[DockerComposeWrapper]:
     del generated_pki  # unused
 
     compose = DockerComposeWrapper(OPENVPN_DIR / "compose.yaml")
-    compose.up()
+    compose.up(build=True)
     yield compose
     compose.rm(force=True, stop=True)
 
 
 def test_openvpn(
-    ssh_command: SSHDriver,
     openvpn_server_env: DockerComposeWrapper,
+    ssh_command: SSHDriver,
 ) -> None:
     def step_openwrt_install_openvpn() -> None:
         run(ssh_command, "opkg update")
@@ -47,7 +48,12 @@ def test_openvpn(
         ssh_command.put(str(OPENVPN_DIR / "client_cert.pem"), "/etc/openvpn/client.crt")
         ssh_command.put(str(OPENVPN_DIR / "client_key.pem"), "/etc/openvpn/client.key")
         run(ssh_command, "uci set openvpn.sample_client.enabled='1'")
-        run(ssh_command, f"uci set openvpn.sample_client.remote='{primary_host_ip()} 1194'")
+        try:
+            openvpn_server_ip = resolve("openvpn-server")
+        except NetworkError:
+            logging.info("Could not resolve openvpn-server address. Trying published port on host.")
+            openvpn_server_ip = primary_host_ip()
+        run(ssh_command, f"uci set openvpn.sample_client.remote='{openvpn_server_ip} 1194'")
         run(ssh_command, "uci commit openvpn")
         run(ssh_command, "/etc/init.d/openvpn start sample_client")
 

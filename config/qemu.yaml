@@ -14,7 +14,7 @@ targets:
         machine: pc
         cpu: core2duo
         memory: 2G
-        extra_args: "-accel kvm"
+        extra_args: ''
         nic: user,model=virtio-net-pci
         disk: disk-image
     - ShellDriver:

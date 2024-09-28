@@ -8,6 +8,10 @@ RUN apt-get update \
         iputils-ping \
         openvpn
 
+COPY ./ca_cert.pem /ca_cert.pem
+COPY ./server_cert.pem /server_cert.pem
+COPY ./server_key.pem /server_key.pem
+
 WORKDIR /
 
 CMD ["/bin/bash"]

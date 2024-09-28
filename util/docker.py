@@ -18,10 +18,12 @@ class DockerComposeWrapper:
         )
         return result.stdout
 
-    def up(self, detach: bool = True) -> None:
+    def up(self, detach: bool = True, build: bool = False) -> None:
         args = ["up"]
         if detach:
             args.append("-d")
+        if build:
+            args.append("--build")
         self._run_command(*args)
 
     def rm(self, force: bool = False, stop: bool = False, volumes: bool = False) -> None:

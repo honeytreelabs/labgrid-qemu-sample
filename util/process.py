@@ -5,13 +5,13 @@ from labgrid.driver import ShellDriver, SSHDriver
 Runner = ShellDriver | SSHDriver
 
 
-def bash_run(cmd: str) -> str:
+def shell_run(cmd: str, shell: str = "/bin/bash") -> str:
     # we explicitly want to run code in a bash shell
     completed_process = subprocess.run(  # noqa: S602
         cmd,
         check=True,
         shell=True,
-        executable="/bin/bash",
+        executable=shell,
         capture_output=True,
         text=True,
     )

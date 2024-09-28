@@ -21,7 +21,9 @@ services:
     - NET_ADMIN
     ports:
     - "1194:1194/udp"
-    volumes:
-    - ./ca_cert.pem:/ca_cert.pem
-    - ./server_cert.pem:/server_cert.pem
-    - ./server_key.pem:/server_key.pem
+    networks:
+    - shared_network
+
+networks:
+  shared_network:
+    name: shared_network
