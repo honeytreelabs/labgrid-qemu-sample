@@ -13,4 +13,4 @@ services:
 
 networks:
   shared_network:
-    name: shared_network
+    name: shared_network-${ENV_ID:-xx}
