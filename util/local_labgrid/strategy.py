@@ -31,6 +31,8 @@ from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
 
+from .params import QEMUParams
+
 
 class Status(enum.Enum):
     unknown = 0
@@ -46,20 +48,25 @@ class QEMUNetworkStrategy(Strategy):
         "qemu": "QEMUDriver",
         "shell": "ShellDriver",
         "ssh": "SSHDriver",
+        "params": "QEMUParams",
     }
 
     qemu: Optional[QEMUDriver] = None
     shell: Optional[ShellDriver] = None
     ssh: Optional[SSHDriver] = None
+    params: Optional[QEMUParams] = None
 
     status = attr.ib(default=Status.unknown)
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
         assert self.ssh
+        assert self.params
 
         self._download_image()  # keep .gz image
-        self._extract_image()  # overwrite image if existing
+        if self.params.overwrite:
+            logging.info(f"Overwriting image {self.disk_path}")
+            self._extract_image()  # overwrite image if existing
 
         self.__port_forward = None
         self.__remote_port = self.ssh.networkservice.port
