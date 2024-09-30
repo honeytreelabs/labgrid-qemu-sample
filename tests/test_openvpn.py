@@ -43,6 +43,7 @@ def test_openvpn(
     def step_openwrt_install_openvpn() -> None:
         run(ssh_command, "opkg update")
         run(ssh_command, "opkg install openvpn-openssl")
+        run(ssh_command, "sync")
 
     def step_openwrt_setup_openvpn() -> None:
         run(ssh_command, "mkdir -p /etc/openvpn")
