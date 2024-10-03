@@ -22,6 +22,16 @@ Our goal is to validate the ability of OpenWrt to establish an OpenVPN connectio
 8. Configure firewall in OpenWrt
 9. Verify the OpenVPN tunnel has been established successfully
 
+## Architecture Overview
+
+This section outlines the architecture implemented for the pytest/labgrid demonstration:
+
+![](./img/labgrid-qemu-sample.svg)
+
+The system is initiated by utilizing GNU Make, which starts a Docker Compose setup. This environment runs both the tests based on the pytest/labgrid test framework and QEMU, the latter serving as the execution environment for the firmware under test. As part of the test fixtures, a Public Key Infrastructure (PKI) is generated. This PKI includes the key material necessary for the OpenVPN server, and it is provided to the OpenVPN server as its Docker Compose environment is started.
+
+During the test execution phase, the test scripts configure the firmware to establish a connection with the OpenVPN server. This involves transferring the key material specific to the firmware under test. In the verification phase, the test script first pings the OpenVPN server from the firmware within the Docker Compose environment. Subsequently, it verifies connectivity in the reverse direction by pinging the firmware from within the OpenVPN server. This process ensures proper communication and confirms that the OpenVPN client in the firmware works as designed.
+
 ## Requirements
 
 - Linux Host
@@ -51,4 +61,4 @@ make test-docker
 
 This is what you should see when running this sample:
 
-![](./qemu_demo-opt.gif)
+![](./img/qemu_demo-opt.gif)
