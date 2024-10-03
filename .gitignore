@@ -167,3 +167,5 @@ openwrt*.img
 .envrc
 .dir-locals.el
 *.img.gz
+*.cast
+qemu_demo.gif

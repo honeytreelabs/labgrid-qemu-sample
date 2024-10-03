@@ -15,6 +15,15 @@ test-docker:
 test-local:
 	pytest -vv --lg-env config/qemu.yaml
 
+qemu_demo.cast:
+	asciinema rec -c "make test-docker" qemu_demo.cast
+
+qemu_demo.gif: qemu_demo.cast
+	agg $< $@
+
+img/qemu_demo-opt.gif: qemu_demo.gif
+	gifsicle --lossy=80 -k 128 -O2 -Okeep-empty $< -o $@
+
 .PHONY: check-format
 check-format:
 	ruff format --check
