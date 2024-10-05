@@ -1,0 +1,22 @@
+variables:
+  FF_TIMESTAMPS: true
+
+stages:
+- build
+- test
+
+build-job:
+  stage: build
+  script:
+  - ENV_ID=${CI_PIPELINE_ID} docker compose build
+
+test-job:
+  stage: test
+  before_script:
+  - env | sort
+  - ENV_ID=${CI_PIPELINE_ID} docker compose up -d
+  script:
+  - ENV_ID=${CI_PIPELINE_ID} docker compose exec -ti debian pytest -svv --lg-env config/qemu.yaml
+  after_script:
+  - ENV_ID=${CI_PIPELINE_ID} docker compose rm -sf
+  - docker network prune -f

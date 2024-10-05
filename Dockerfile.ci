@@ -34,13 +34,17 @@ $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
     && apt-get update \
     && apt-get install -yy docker-ce-cli docker-compose-plugin
 
-USER user
-
 ENV PATH="${PATH}:/home/user/.local/bin"
 
 COPY ./requirements.txt /requirements.txt
 
 RUN pip install -r /requirements.txt
+
+RUN mkdir /workspace
+
+# copy git repository into container to make setup more portable
+# this is especially needed for using docker in docker
+COPY . /workspace
 
 WORKDIR /workspace
 
