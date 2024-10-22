@@ -9,8 +9,8 @@ services:
     networks:
     - shared_network
     environment:
-      ENV_ID: ${CI_PIPELINE_ID:-xx}
+      SHARED_NETWORK_ID: ${CI_PIPELINE_ID:-xx}
 
 networks:
   shared_network:
-    name: shared_network-${ENV_ID:-xx}
+    name: shared_network-${CI_PIPELINE_ID:-xx}
