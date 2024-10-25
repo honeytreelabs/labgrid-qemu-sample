@@ -35,7 +35,7 @@ def openvpn_server_env(generated_pki: PKI) -> Iterator[DockerComposeWrapper]:
     compose.rm(force=True, stop=True)
 
 
-@pytest.mark.skip(reason="Not needed in demo right now.")
+@pytest.mark.openvpn
 def test_openvpn(
     openvpn_server_env: DockerComposeWrapper,
     ssh_command: SSHDriver,
