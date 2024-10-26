@@ -10,7 +10,35 @@ services:
     - shared_network
     environment:
       SHARED_NETWORK_ID: ${CI_PIPELINE_ID:-xx}
+    stop_grace_period: 2s
+    depends_on:
+      artifacts:
+        condition: service_healthy
+  artifacts:
+    build:
+      context: artifacts
+      dockerfile: Dockerfile.artifacts
+    volumes:
+    - "artifacts:/artifacts"
+    restart: always
+    environment:
+      ARTIFACTS_FILE: /artifacts.yaml
+      ARTIFACTS_DIR: /artifacts
+      LISTEN_ADDR: 0.0.0.0
+      LISTEN_PORT: 8000
+    networks:
+    # also make availale to sub compose environments
+    - shared_network
+    stop_grace_period: 2s
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:$${LISTEN_PORT}"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
 
 networks:
   shared_network:
     name: shared_network-${CI_PIPELINE_ID:-xx}
+
+volumes:
+  artifacts: {}

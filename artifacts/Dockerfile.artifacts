@@ -1,0 +1,17 @@
+FROM python:3.13-bookworm
+
+LABEL org.opencontainers.image.authors="Rainer Poisel <rainer@honeytreelabs.com>"
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update \
+    && apt install -yy \
+        curl
+
+COPY requirements.txt /requirements.txt
+
+RUN pip install -r /requirements.txt
+
+COPY ./artifacts.yaml /artifacts.yaml
+COPY ./artifacts /artifacts_srv
+
+CMD python /artifacts_srv
