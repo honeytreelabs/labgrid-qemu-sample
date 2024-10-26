@@ -17,7 +17,7 @@ def test_openwrt_get_ip_addr_ok() -> None:
 
 
 @patch("network.shell_run")
-def test_primary_host_ip_ok(mock_shell_run) -> None:
+def test_primary_host_ip_ok(mock_shell_run: MagicMock) -> None:
     ip_r_s_output = json.dumps([{"dev": "eth0"}])
     ip_a_s_output = json.dumps([{"addr_info": [{"local": "192.168.1.1"}]}])
     mock_shell_run.side_effect = [ip_r_s_output, ip_a_s_output]
