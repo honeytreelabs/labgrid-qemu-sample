@@ -40,6 +40,11 @@ COPY ./requirements.txt /requirements.txt
 
 RUN pip install -r /requirements.txt
 
+ARG TINI_VERSION=v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
+
 RUN mkdir /workspace
 
 # copy git repository into container to make setup more portable
@@ -48,4 +53,4 @@ COPY . /workspace
 
 WORKDIR /workspace
 
-CMD ["/bin/bash"]
+CMD ["sleep", "infinity" ]

@@ -14,4 +14,4 @@ RUN pip install -r /requirements.txt
 COPY ./artifacts.yaml /artifacts.yaml
 COPY ./artifacts /artifacts_srv
 
-CMD python /artifacts_srv
+CMD ["python", "/artifacts_srv"]
