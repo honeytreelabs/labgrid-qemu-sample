@@ -16,7 +16,15 @@ test-job:
   - env | sort
   - ENV_ID=${CI_PIPELINE_ID} docker compose up -d
   script:
-  - ENV_ID=${CI_PIPELINE_ID} docker compose exec -ti debian pytest -svv --lg-env config/qemu.yaml -m 'not openvpn'
+  - ENV_ID=${CI_PIPELINE_ID} docker compose exec -ti debian pytest -svv --lg-env config/qemu.yaml --junit-xml=/tmp/result.xml -m 'not openvpn'
+  - ENV_ID=${CI_PIPELINE_ID} docker compose cp debian:/tmp/result.xml result.xml
   after_script:
   - ENV_ID=${CI_PIPELINE_ID} docker compose rm -sf
   - docker network prune -f
+  artifacts:
+    when: always
+    paths:
+    - result.xml
+    reports:
+      junit: result.xml
+
