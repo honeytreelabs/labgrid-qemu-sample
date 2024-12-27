@@ -1,4 +1,4 @@
-FROM python:3.12-bookworm
+FROM python:3.13-bookworm
 
 LABEL org.opencontainers.image.authors="Rainer Poisel <rainer@honeytreelabs.com>"
 
@@ -34,16 +34,9 @@ $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
     && apt-get update \
     && apt-get install -yy docker-ce-cli docker-compose-plugin
 
-ENV PATH="${PATH}:/home/user/.local/bin"
+ENV PATH="/home/user/.local/bin:/workspace/.venv/bin:${PATH}"
 
-COPY ./requirements.txt /requirements.txt
-
-RUN pip install -r /requirements.txt
-
-ARG TINI_VERSION=v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
-ENTRYPOINT ["/tini", "--"]
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /home/user/.local/bin/uv
 
 RUN mkdir /workspace
 
@@ -52,5 +45,8 @@ RUN mkdir /workspace
 COPY . /workspace
 
 WORKDIR /workspace
+
+# COPY ./requirements.txt /requirements.txt
+RUN uv sync
 
 CMD ["sleep", "infinity" ]

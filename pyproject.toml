@@ -1,3 +1,17 @@
+[project]
+name = "labgrid-qemu-sample"
+version = "1.0.0"
+description = "Labgrid QEMU Sample Code"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx",
+    "pytest==8.3.3",
+    "labgrid @ git+https://github.com/labgrid-project/labgrid.git@master",
+    "ipdb==0.13.13",
+    "cryptography==43.0.1",
+]
+
 [tool.ruff]
 line-length = 120
 
@@ -58,6 +72,12 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.391",
+    "ruff>=0.6.8",
+]
 
 [tool.ruff.lint.flake8-pytest-style]
 # Ignore missing '()' at marker without args.

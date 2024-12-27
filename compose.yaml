@@ -9,6 +9,7 @@ services:
     - shared_network
     environment:
       SHARED_NETWORK_ID: ${CI_PIPELINE_ID:-xx}
+    init: true
     depends_on:
       artifacts:
         condition: service_healthy

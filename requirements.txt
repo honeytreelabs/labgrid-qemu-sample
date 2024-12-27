@@ -1,6 +1,0 @@
-httpx
-pytest==8.3.3
-labgrid @ git+https://github.com/labgrid-project/labgrid.git@master
-ipdb==0.13.13
-ruff==0.6.8
-cryptography==43.0.1
