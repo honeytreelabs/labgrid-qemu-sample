@@ -10,7 +10,7 @@ targets:
         overwrite: true
 
     drivers:
-    - QEMUDriver:
+    - CustomQEMUDriver:
         qemu_bin: qemu-amd64
         machine: pc
         cpu: core2duo

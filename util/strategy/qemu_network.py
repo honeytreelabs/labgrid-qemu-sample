@@ -19,15 +19,14 @@ import subprocess
 import time
 import urllib.parse
 from pathlib import Path
-from typing import Optional
 
 import attr
 import httpx
 import service
 import uci
-from driver import QEMUParams
+from driver import CustomQEMUDriver, QEMUParams
 from labgrid import step, target_factory
-from labgrid.driver import QEMUDriver, ShellDriver, SSHDriver
+from labgrid.driver import ShellDriver, SSHDriver
 from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
@@ -44,16 +43,16 @@ class Status(enum.Enum):
 @attr.s(eq=False)
 class QEMUNetworkStrategy(Strategy):
     bindings = {
-        "qemu": "QEMUDriver",
+        "qemu": "CustomQEMUDriver",
         "shell": "ShellDriver",
         "ssh": "SSHDriver",
         "params": "QEMUParams",
     }
 
-    qemu: Optional[QEMUDriver] = None
-    shell: Optional[ShellDriver] = None
-    ssh: Optional[SSHDriver] = None
-    params: Optional[QEMUParams] = None
+    qemu: CustomQEMUDriver | None = None
+    shell: ShellDriver | None = None
+    ssh: SSHDriver | None = None
+    params: QEMUParams | None = None
 
     status = attr.ib(default=Status.unknown)
 
