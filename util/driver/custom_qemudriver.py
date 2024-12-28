@@ -51,20 +51,20 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         nic (str): optional, configuration string to pass to QEMU to create a network interface
     """
 
-    qemu_bin = attr.ib(validator=attr.validators.instance_of(str))
-    machine = attr.ib(validator=attr.validators.instance_of(str))
-    cpu = attr.ib(validator=attr.validators.instance_of(str))
-    memory = attr.ib(validator=attr.validators.instance_of(str))
-    extra_args = attr.ib(validator=attr.validators.instance_of(str))
-    boot_args = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    kernel = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    disk = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    disk_opts = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    rootfs = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    dtb = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    flash = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    bios = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    display = attr.ib(
+    qemu_bin: str | None = attr.ib(default=None, validator=attr.validators.instance_of(str))
+    machine: str | None = attr.ib(default=None, validator=attr.validators.instance_of(str))
+    cpu: str | None = attr.ib(default=None, validator=attr.validators.instance_of(str))
+    memory: str | None = attr.ib(default=None, validator=attr.validators.instance_of(str))
+    extra_args: str | None = attr.ib(default=None, validator=attr.validators.instance_of(str))
+    boot_args: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    kernel: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    disk: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    disk_opts: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    rootfs: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    dtb: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    flash: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    bios: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    display: str | None = attr.ib(
         default="none",
         validator=attr.validators.optional(
             attr.validators.and_(
@@ -73,9 +73,9 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             )
         ),
     )
-    nic = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    nic: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
         self.status = 0
         self.txdelay = None
@@ -86,7 +86,7 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         self._forwarded_ports = {}
         atexit.register(self._atexit)
 
-    def _atexit(self):
+    def _atexit(self) -> None:
         if not self._child:
             return
         self._child.terminate()
@@ -96,23 +96,29 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             self._child.kill()
             self._child.communicate(timeout=1)
 
-    def get_qemu_version(self, qemu_bin):
+    def get_qemu_version(self, qemu_bin: str) -> tuple[int, int, int]:
         p = subprocess.run([qemu_bin, "-version"], stdout=subprocess.PIPE, encoding="utf-8")
         if p.returncode != 0:
-            raise ExecutionError(f"Unable to get QEMU version. QEMU exited with: {p.returncode}")
+            raise ExecutionError(f"Unable to get QEMU version. QEMU exited with: {p.returncode}")  # type: ignore
 
         m = re.search(r"(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)", p.stdout.splitlines()[0])
         if m is None:
-            raise ExecutionError(f"Unable to find QEMU version in: {p.stdout.splitlines()[0]}")
+            raise ExecutionError(f"Unable to find QEMU version in: {p.stdout.splitlines()[0]}")  # type: ignore
 
         return (int(m.group("major")), int(m.group("minor")), int(m.group("micro")))
 
-    def get_qemu_base_args(self):
+    def get_qemu_base_args(self) -> list[str]:
         """Returns the base command line used for Qemu without the options
         related to QMP. These options can be used to start an interactive
         Qemu manually for debugging tests
         """
-        cmd = []
+        assert self.target
+        assert self.extra_args
+        assert self.machine
+        assert self.cpu
+        assert self.memory
+
+        cmd: list[str] = []
 
         qemu_bin = self.target.env.config.get_tool(self.qemu_bin)
         if qemu_bin is None:
@@ -161,7 +167,7 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             cmd.append(self.target.env.config.get_image_path(self.bios))
 
         if "-append" in shlex.split(self.extra_args):
-            raise ExecutionError("-append in extra_args not allowed, use boot_args instead")
+            raise ExecutionError("-append in extra_args not allowed, use boot_args instead")  # type: ignore
 
         cmd.extend(shlex.split(self.extra_args))
         cmd.append("-machine")
@@ -185,7 +191,7 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             cmd.append("-display")
             cmd.append("egl-headless")
         else:
-            raise ExecutionError(f"Unknown display '{self.display}'")
+            raise ExecutionError(f"Unknown display '{self.display}'")  # type: ignore
 
         if self.nic:
             cmd.append("-nic")
@@ -199,7 +205,7 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
 
         return cmd
 
-    def on_activate(self):
+    def on_activate(self) -> None:
         self._tempdir = tempfile.mkdtemp(prefix="labgrid-qemu-tmp-")
         sockpath = f"{self._tempdir}/serialrw"
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -217,7 +223,10 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         self._cmd.append("-serial")
         self._cmd.append("chardev:serialsocket")
 
-    def on_deactivate(self):
+    def on_deactivate(self) -> None:
+        assert self._socket
+        assert self._tempdir
+
         if self.status:
             self.off()
         if self._clientsocket:
@@ -228,9 +237,11 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         shutil.rmtree(self._tempdir)
 
     @step()
-    def on(self):
+    def on(self) -> None:
         """Start the QEMU subprocess, accept the unix socket connection and
         afterwards start the emulator using a QMP Command"""
+        assert self._socket
+
         if self.status:
             return
         self.logger.debug("Starting with: %s", self._cmd)
@@ -238,15 +249,15 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
 
         # prepare for timeout handing
         self._clientsocket, address = self._socket.accept()
-        self._clientsocket.setblocking(0)
+        self._clientsocket.setblocking(False)
         self.logger.debug("new connection from %s", address)
 
         try:
-            self.qmp = QMPMonitor(self._child.stdout, self._child.stdin)
+            self.qmp = QMPMonitor(self._child.stdout, self._child.stdin)  # type: ignore
         except QMPError as exc:
             if self._child.poll() is not None:
                 self._child.communicate()
-                raise IOError(f"QEMU process terminated with exit code {self._child.returncode}") from exc
+                raise OSError(f"QEMU process terminated with exit code {self._child.returncode}") from exc
             raise
 
         self.status = 1
@@ -258,36 +269,44 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         self.monitor_command("cont")
 
     @step()
-    def off(self):
+    def off(self) -> None:
         """Stop the emulator using a monitor command and await the exitcode"""
+        assert self._child
+
         if not self.status:
             return
         self.monitor_command("quit")
         if self._child.wait() != 0:
             self._child.communicate()
-            raise IOError
+            raise OSError
         self._child = None
         self.status = 0
 
-    def cycle(self):
+    def cycle(self) -> None:
         """Cycle the emulator by restarting it"""
         self.off()
         self.on()
 
     @step(result=True, args=["command", "arguments"])
-    def monitor_command(self, command, arguments={}):
+    def monitor_command(self, command: str, arguments: dict | None = None) -> str:
         """Execute a monitor_command via the QMP"""
+        if arguments is None:
+            arguments = {}
         if not self.status:
-            raise ExecutionError("Can't use monitor command on non-running target")
+            raise ExecutionError("Can't use monitor command on non-running target")  # type: ignore
         return self.qmp.execute(command, arguments)
 
-    def _add_port_forward(self, proto, local_address, local_port, remote_address, remote_port):
+    def _add_port_forward(
+        self, proto: str, local_address: str, local_port: int, remote_address: str, remote_port: int
+    ) -> None:
         self.monitor_command(
             "human-monitor-command",
             {"command-line": f"hostfwd_add {proto}:{local_address}:{local_port}-{remote_address}:{remote_port}"},
         )
 
-    def add_port_forward(self, proto, local_address, local_port, remote_address, remote_port):
+    def add_port_forward(
+        self, proto: str, local_address: str, local_port: int, remote_address: str, remote_port: int
+    ) -> None:
         self._add_port_forward(proto, local_address, local_port, remote_address, remote_port)
         self._forwarded_ports[(proto, local_address, local_port)] = (
             proto,
@@ -297,14 +316,16 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             remote_port,
         )
 
-    def remove_port_forward(self, proto, local_address, local_port):
+    def remove_port_forward(self, proto: str, local_address: str, local_port: int) -> None:
         del self._forwarded_ports[(proto, local_address, local_port)]
         self.monitor_command(
             "human-monitor-command",
             {"command-line": f"hostfwd_remove {proto}:{local_address}:{local_port}"},
         )
 
-    def _read(self, size=1, timeout=10, max_size=None):
+    def _read(self, size: int = 1, timeout: float = 10, max_size: int | None = None) -> bytes:
+        assert self._clientsocket
+
         ready, _, _ = select.select([self._clientsocket], [], [], timeout)
         if ready:
             # Collect some more data
@@ -317,8 +338,10 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             raise TIMEOUT(f"Timeout of {timeout:.2f} seconds exceeded")
         return res
 
-    def _write(self, data):
+    def _write(self, data) -> int:  # type: ignore
+        assert self._clientsocket
         return self._clientsocket.send(data)
 
-    def __str__(self):
+    def __str__(self) -> str:
+        assert self.target
         return f"QemuDriver({self.target.name})"
