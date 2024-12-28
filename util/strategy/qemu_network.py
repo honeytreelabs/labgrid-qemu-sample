@@ -25,13 +25,12 @@ import attr
 import httpx
 import service
 import uci
+from driver import QEMUParams
 from labgrid import step, target_factory
 from labgrid.driver import QEMUDriver, ShellDriver, SSHDriver
 from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
-
-from .params import QEMUParams
 
 
 class Status(enum.Enum):

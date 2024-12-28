@@ -6,9 +6,9 @@ import openwrt
 import pytest
 from docker import DockerComposeWrapper
 from labgrid.driver import SSHDriver
-from local_labgrid import QEMUNetworkStrategy
 from network import NetworkError, primary_host_ip, resolve
 from process import run
+from strategy import QEMUNetworkStrategy
 from x509 import PKI, create_pki
 
 OPENVPN_DIR = Path(__file__).parent / "openvpn"

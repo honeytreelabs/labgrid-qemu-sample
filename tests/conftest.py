@@ -1,7 +1,7 @@
 import pytest
 from labgrid import Target
 from labgrid.driver import ShellDriver, SSHDriver
-from local_labgrid import QEMUNetworkStrategy, Status
+from strategy import QEMUNetworkStrategy, Status
 
 
 @pytest.fixture(scope="module")
