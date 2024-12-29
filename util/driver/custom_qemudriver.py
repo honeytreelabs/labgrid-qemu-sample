@@ -4,11 +4,10 @@ import atexit
 import re
 import select
 import shlex
-import shutil
 import socket
 import subprocess
-import tempfile
 import time
+from typing import Callable
 
 import attr
 from labgrid.driver import Driver
@@ -19,6 +18,61 @@ from labgrid.protocol import ConsoleProtocol, PowerProtocol
 from labgrid.step import step
 from labgrid.util.qmp import QMPError, QMPMonitor
 from pexpect import TIMEOUT
+
+
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("localhost", port)) == 0
+
+
+def wait_for(cond: Callable[[], bool], desc: str, timeout: int = 10) -> None:
+    """
+    Wait for a Unix domain socket to appear at the specified path.
+
+    :param cond: Condition to wait to become true
+    :param desc: Description of what to wait for
+    :param timeout: Timeout in seconds to wait for the socket.
+    :raises TimeoutError: If the socket does not appear within the timeout.
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if cond():
+            return
+        time.sleep(0.1)  # Sleep briefly to avoid busy-waiting
+    raise TimeoutError(f"Timeout while waiting for condition to become true: {desc}.")
+
+
+def kill_process(proc: subprocess.Popen | None) -> None:
+    if proc is None:
+        return
+    proc.terminate()
+    try:
+        proc.communicate(timeout=1)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.communicate(timeout=1)
+
+
+def start_ser2net_mux(port_conn: int, port_accept: int) -> subprocess.Popen:
+    return subprocess.Popen(
+        [
+            "ser2net",
+            "-n",
+            "-d",
+            "-Y",
+            "connection: &con01",
+            "-Y",
+            f"  connector: telnet(rfc2217), tcp,{port_conn}",
+            "-Y",
+            f"  accepter: telnet(rfc2217,mode=server),tcp,{port_accept}",
+            "-Y",
+            "  options:",
+            "-Y",
+            "    max-connections: 10",
+            "-Y",
+            "    mdns: false",
+        ],
+    )
 
 
 @target_factory.reg_driver
@@ -79,22 +133,17 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         super().__attrs_post_init__()
         self.status = 0
         self.txdelay = None
-        self._child = None
-        self._tempdir = None
+        self._child_qemu: subprocess.Popen | None = None
+        self._child_ser2net: subprocess.Popen | None = None
         self._socket = None
-        self._clientsocket = None
         self._forwarded_ports = {}
         atexit.register(self._atexit)
 
     def _atexit(self) -> None:
-        if not self._child:
-            return
-        self._child.terminate()
-        try:
-            self._child.communicate(timeout=1)
-        except subprocess.TimeoutExpired:
-            self._child.kill()
-            self._child.communicate(timeout=1)
+        kill_process(self._child_qemu)
+        self._child_qemu = None
+        kill_process(self._child_ser2net)
+        self._child_ser2net = None
 
     def get_qemu_version(self, qemu_bin: str) -> tuple[int, int, int]:
         p = subprocess.run([qemu_bin, "-version"], stdout=subprocess.PIPE, encoding="utf-8")
@@ -206,11 +255,7 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         return cmd
 
     def on_activate(self) -> None:
-        self._tempdir = tempfile.mkdtemp(prefix="labgrid-qemu-tmp-")
-        sockpath = f"{self._tempdir}/serialrw"
-        self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self._socket.bind(sockpath)
-        self._socket.listen(0)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self._cmd = self.get_qemu_base_args()
 
@@ -219,22 +264,17 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         self._cmd.append("stdio")
 
         self._cmd.append("-chardev")
-        self._cmd.append(f"socket,id=serialsocket,path={sockpath}")
+        self._cmd.append(f"socket,id=serialsocket,host=0.0.0.0,port=54321,server,wait=off")
         self._cmd.append("-serial")
         self._cmd.append("chardev:serialsocket")
 
     def on_deactivate(self) -> None:
         assert self._socket
-        assert self._tempdir
 
         if self.status:
             self.off()
-        if self._clientsocket:
-            self._clientsocket.close()
-            self._clientsocket = None
         self._socket.close()
         self._socket = None
-        shutil.rmtree(self._tempdir)
 
     @step()
     def on(self) -> None:
@@ -244,20 +284,21 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
 
         if self.status:
             return
-        self.logger.debug("Starting with: %s", self._cmd)
-        self._child = subprocess.Popen(self._cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.logger.info("Starting with: %s", " ".join(self._cmd))
+        self._child_qemu = subprocess.Popen(self._cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        wait_for(lambda: is_port_in_use(54321), "port 54321 in use")
 
-        # prepare for timeout handing
-        self._clientsocket, address = self._socket.accept()
-        self._clientsocket.setblocking(False)
-        self.logger.debug("new connection from %s", address)
+        self._child_ser2net = start_ser2net_mux(54321, 12345)
+        wait_for(lambda: is_port_in_use(12345), "port 12345 in use")
+
+        self._socket.connect(("localhost", 12345))
 
         try:
-            self.qmp = QMPMonitor(self._child.stdout, self._child.stdin)  # type: ignore
+            self.qmp = QMPMonitor(self._child_qemu.stdout, self._child_qemu.stdin)  # type: ignore
         except QMPError as exc:
-            if self._child.poll() is not None:
-                self._child.communicate()
-                raise OSError(f"QEMU process terminated with exit code {self._child.returncode}") from exc
+            if self._child_qemu.poll() is not None:
+                self._child_qemu.communicate()
+                raise OSError(f"QEMU process terminated with exit code {self._child_qemu.returncode}") from exc
             raise
 
         self.status = 1
@@ -271,15 +312,16 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
     @step()
     def off(self) -> None:
         """Stop the emulator using a monitor command and await the exitcode"""
-        assert self._child
-
         if not self.status:
             return
+
         self.monitor_command("quit")
-        if self._child.wait() != 0:
-            self._child.communicate()
-            raise OSError
-        self._child = None
+        kill_process(self._child_qemu)
+        self._child_qemu = None
+
+        kill_process(self._child_ser2net)
+        self._child_ser2net = None
+
         self.status = 0
 
     def cycle(self) -> None:
@@ -324,23 +366,24 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         )
 
     def _read(self, size: int = 1, timeout: float = 10, max_size: int | None = None) -> bytes:
-        assert self._clientsocket
+        assert self._socket
 
-        ready, _, _ = select.select([self._clientsocket], [], [], timeout)
+        ready, _, _ = select.select([self._socket], [], [], timeout)
         if ready:
             # Collect some more data
             time.sleep(0.01)
             # Always read a page, regardless of size
             size = 4096
             size = min(max_size, size) if max_size else size
-            res = self._clientsocket.recv(size)
+            res = self._socket.recv(size)
         else:
             raise TIMEOUT(f"Timeout of {timeout:.2f} seconds exceeded")
         return res
 
     def _write(self, data) -> int:  # type: ignore
-        assert self._clientsocket
-        return self._clientsocket.send(data)
+        assert self._socket
+
+        return self._socket.send(data)
 
     def __str__(self) -> str:
         assert self.target

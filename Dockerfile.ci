@@ -13,15 +13,21 @@ RUN groupadd -g ${GROUP_ID} user \
     && (groupadd -g ${DOCKER_GID} docker || true) \
     && usermod -aG ${DOCKER_GID} user
 
-RUN apt-get update \
-    && apt-get install -yy --no-install-recommends \
+RUN <<EOT
+apt-get update -qy
+apt-get install -qyy \
+    -o APT::Install-Recommends=false \
+    -o APT::Install-Suggests=false \
         bind9-dnsutils \
         iproute2 \
         iputils-ping \
         jq \
         openvpn \
         qemu-system-arm \
-        qemu-system-x86
+        qemu-system-x86 \
+        ser2net \
+        telnet
+EOT
 
 RUN apt-get install -yy ca-certificates curl \
     && install -m 0755 -d /etc/apt/keyrings \
