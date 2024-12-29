@@ -116,7 +116,9 @@ class QEMUNetworkStrategy(Strategy):
 
     @step()
     def update_network_service(self) -> None:
-        if "accel kvm" not in self.qemu.extra_args:
+        assert self.qemu
+
+        if self.qemu.extra_args is not None and "accel kvm" not in self.qemu.extra_args:
             time.sleep(5)  # wait for device to acquire IP address
         new_address = self.get_remote_address()
         networkservice = self.ssh.networkservice
@@ -124,27 +126,23 @@ class QEMUNetworkStrategy(Strategy):
         if networkservice.address != new_address:
             self.target.deactivate(self.ssh)
 
-            if "user" in self.qemu.nic.split(","):
-                if self.__port_forward is not None:
-                    self.qemu.remove_port_forward(*self.__port_forward)
+            if self.__port_forward is not None:
+                self.qemu.remove_port_forward(*self.__port_forward)
 
-                local_port = get_free_port()
-                local_address = "127.0.0.1"
+            local_port = get_free_port()
+            local_address = "127.0.0.1"
 
-                self.qemu.add_port_forward(
-                    "tcp",
-                    local_address,
-                    local_port,
-                    new_address,
-                    self.__remote_port,
-                )
-                self.__port_forward = ("tcp", local_address, local_port)
+            self.qemu.add_port_forward(
+                "tcp",
+                local_address,
+                local_port,
+                new_address,
+                self.__remote_port,
+            )
+            self.__port_forward = ("tcp", local_address, local_port)
 
-                networkservice.address = local_address
-                networkservice.port = local_port
-            else:
-                networkservice.address = new_address
-                networkservice.port = self.__remote_port
+            networkservice.address = local_address
+            networkservice.port = local_port
 
     @step(args=["state"])
     def transition(self, state: Status | str, *, step: Step) -> None:

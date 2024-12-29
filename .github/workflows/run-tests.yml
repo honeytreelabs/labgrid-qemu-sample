@@ -24,5 +24,5 @@ jobs:
     - name: Create and start the Docker Compose environment
       run: docker compose up --detach
     - name: Run the tests
-      run: docker compose exec -ti debian pytest -svv --lg-env config/qemu.yaml --junit-xml=/tmp/result.xml -m 'not openvpn'
+      run: docker compose exec -ti debian pytest -svv --lg-env config/qemu.yaml --junit-xml=/tmp/result.xml
 

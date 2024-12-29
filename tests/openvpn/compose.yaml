@@ -11,13 +11,14 @@ services:
       mknod /dev/net/tun c 10 200
       chmod 600 /dev/net/tun
       openvpn --mode server --tls-server \
-          --dev tun --server 172.17.0.0 255.255.255.0 \
+          --dev tun --server 192.168.123.0 255.255.255.0 \
           --dh none --ca /ca_cert.pem --cert /server_cert.pem --key /server_key.pem \
           --cipher AES-256-CBC --auth SHA256 \
           --ping 1 --ping-restart 6 \
           --push "ping 1" --push "ping-restart 6"
     cap_add:
     - NET_ADMIN
+    privileged: true
     ports:
     - "1194:1194/udp"
     networks:
@@ -26,3 +27,4 @@ services:
 networks:
   shared_network:
     name: shared_network-${SHARED_NETWORK_ID:-xx}
+    external: true

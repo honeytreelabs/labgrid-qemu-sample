@@ -67,7 +67,7 @@ def test_openvpn(
         run(ssh_command, "service firewall restart")
 
     def step_verify_connected() -> None:
-        assert run(ssh_command, "ping -c 5 172.17.0.1")
+        assert run(ssh_command, "ping -c 5 192.168.123.1")
         tun0_ip = openwrt.get_ip_addr(ssh_command, "tun0")
         assert openvpn_server_env.exec("openvpn-server", f"ping -c 5 {tun0_ip}")
 

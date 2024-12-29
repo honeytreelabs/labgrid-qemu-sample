@@ -5,7 +5,7 @@ from process import run
 
 
 def set(shell: ShellDriver | SSHDriver, key: str, value: str) -> None:
-    run(shell, f"uci set {key}={value}")
+    run(shell, f'uci set {key}="{value}"')
 
 
 def commit(shell: ShellDriver | SSHDriver, section: Optional[str] = None) -> None:
