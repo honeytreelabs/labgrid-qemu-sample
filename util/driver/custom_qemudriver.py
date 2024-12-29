@@ -113,10 +113,10 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         atexit.register(self._atexit)
 
     def _atexit(self) -> None:
-        kill_process(self._child_qemu)
-        self._child_qemu = None
         kill_process(self._child_ser2net)
         self._child_ser2net = None
+        kill_process(self._child_qemu)
+        self._child_qemu = None
 
     def get_qemu_version(self, qemu_bin: str) -> tuple[int, int, int]:
         p = subprocess.run([qemu_bin, "-version"], stdout=subprocess.PIPE, encoding="utf-8")
@@ -287,12 +287,12 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         if not self.status:
             return
 
+        kill_process(self._child_ser2net)
+        self._child_ser2net = None
+
         self.monitor_command("quit")
         kill_process(self._child_qemu)
         self._child_qemu = None
-
-        kill_process(self._child_ser2net)
-        self._child_ser2net = None
 
         self.status = 0
 
