@@ -2,8 +2,6 @@ FROM python:3.13-bookworm
 
 LABEL org.opencontainers.image.authors="Rainer Poisel <rainer@honeytreelabs.com>"
 
-ENV DEBIAN_FRONTEND=noninteractive
-
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 ARG DOCKER_GID=997
@@ -28,6 +26,8 @@ apt-get install -qyy \
         ser2net \
         telnet
 EOT
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get install -yy ca-certificates curl \
     && install -m 0755 -d /etc/apt/keyrings \

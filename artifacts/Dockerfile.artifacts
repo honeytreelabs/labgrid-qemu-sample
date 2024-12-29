@@ -2,10 +2,13 @@ FROM python:3.13-bookworm
 
 LABEL org.opencontainers.image.authors="Rainer Poisel <rainer@honeytreelabs.com>"
 
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update \
-    && apt install -yy \
+RUN <<EOT
+apt-get update -qy
+apt-get install -qyy \
+    -o APT::Install-Recommends=false \
+    -o APT::Install-Suggests=false \
         curl
+EOT
 
 COPY requirements.txt /requirements.txt
 
