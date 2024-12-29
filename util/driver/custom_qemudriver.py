@@ -308,7 +308,7 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             self._add_port_forward(*v)
 
         self.monitor_command("cont")
-        time.sleep(1)
+        time.sleep(5)
         self.sendline("")
 
     @step()
