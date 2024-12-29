@@ -128,6 +128,7 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         ),
     )
     nic: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
+    ser2net: bool = attr.ib(default=False, validator=attr.validators.instance_of(bool))
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
@@ -288,10 +289,12 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         self._child_qemu = subprocess.Popen(self._cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         wait_for(lambda: is_port_in_use(54321), "port 54321 in use")
 
-        self._child_ser2net = start_ser2net_mux(54321, 12345)
-        wait_for(lambda: is_port_in_use(12345), "port 12345 in use")
-
-        self._socket.connect(("localhost", 12345))
+        if self.ser2net:
+            self._child_ser2net = start_ser2net_mux(54321, 12345)
+            wait_for(lambda: is_port_in_use(12345), "port 12345 in use")
+            self._socket.connect(("localhost", 12345))
+        else:
+            self._socket.connect(("localhost", 54321))
 
         try:
             self.qmp = QMPMonitor(self._child_qemu.stdout, self._child_qemu.stdin)  # type: ignore
@@ -308,8 +311,9 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             self._add_port_forward(*v)
 
         self.monitor_command("cont")
-        time.sleep(5)
-        self.sendline("")
+        if self.ser2net:
+            time.sleep(1)
+            self.sendline("")
 
     @step()
     def off(self) -> None:
