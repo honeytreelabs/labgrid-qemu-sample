@@ -20,3 +20,14 @@ def shell_run(cmd: str, shell: str = "/bin/bash") -> str:
 
 def run(shell: Runner, cmd: str) -> str:
     return "\n".join(shell.run_check(cmd))
+
+
+def kill_process(proc: subprocess.Popen | None) -> None:
+    if proc is None:
+        return
+    proc.terminate()
+    try:
+        proc.communicate(timeout=1)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.communicate(timeout=1)

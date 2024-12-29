@@ -7,9 +7,9 @@ import shlex
 import socket
 import subprocess
 import time
-from typing import Callable
 
 import attr
+from func import wait_for
 from labgrid.driver import Driver
 from labgrid.driver.consoleexpectmixin import ConsoleExpectMixin
 from labgrid.driver.exception import ExecutionError
@@ -18,39 +18,12 @@ from labgrid.protocol import ConsoleProtocol, PowerProtocol
 from labgrid.step import step
 from labgrid.util.qmp import QMPError, QMPMonitor
 from pexpect import TIMEOUT
+from process import kill_process
 
 
 def is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(("localhost", port)) == 0
-
-
-def wait_for(cond: Callable[[], bool], desc: str, timeout: int = 10) -> None:
-    """
-    Wait for a Unix domain socket to appear at the specified path.
-
-    :param cond: Condition to wait to become true
-    :param desc: Description of what to wait for
-    :param timeout: Timeout in seconds to wait for the socket.
-    :raises TimeoutError: If the socket does not appear within the timeout.
-    """
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if cond():
-            return
-        time.sleep(0.1)  # Sleep briefly to avoid busy-waiting
-    raise TimeoutError(f"Timeout while waiting for condition to become true: {desc}.")
-
-
-def kill_process(proc: subprocess.Popen | None) -> None:
-    if proc is None:
-        return
-    proc.terminate()
-    try:
-        proc.communicate(timeout=1)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        proc.communicate(timeout=1)
 
 
 def start_ser2net_mux(port_conn: int, port_accept: int) -> subprocess.Popen:
@@ -62,9 +35,9 @@ def start_ser2net_mux(port_conn: int, port_accept: int) -> subprocess.Popen:
             "-Y",
             "connection: &con01",
             "-Y",
-            f"  connector: telnet(rfc2217), tcp,{port_conn}",
+            f"  connector: tcp,localhost,{port_conn}",
             "-Y",
-            f"  accepter: telnet(rfc2217,mode=server),tcp,{port_accept}",
+            f"  accepter: tcp,localhost,{port_accept}",
             "-Y",
             "  options:",
             "-Y",
@@ -128,7 +101,6 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         ),
     )
     nic: str | None = attr.ib(default=None, validator=attr.validators.optional(attr.validators.instance_of(str)))
-    ser2net: bool = attr.ib(default=False, validator=attr.validators.instance_of(bool))
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
@@ -289,12 +261,9 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         self._child_qemu = subprocess.Popen(self._cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         wait_for(lambda: is_port_in_use(54321), "port 54321 in use")
 
-        if self.ser2net:
-            self._child_ser2net = start_ser2net_mux(54321, 12345)
-            wait_for(lambda: is_port_in_use(12345), "port 12345 in use")
-            self._socket.connect(("localhost", 12345))
-        else:
-            self._socket.connect(("localhost", 54321))
+        self._child_ser2net = start_ser2net_mux(54321, 12345)
+        wait_for(lambda: is_port_in_use(12345), "port 12345 in use")
+        self._socket.connect(("localhost", 12345))
 
         try:
             self.qmp = QMPMonitor(self._child_qemu.stdout, self._child_qemu.stdin)  # type: ignore
@@ -311,9 +280,6 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             self._add_port_forward(*v)
 
         self.monitor_command("cont")
-        if self.ser2net:
-            time.sleep(1)
-            self.sendline("")
 
     @step()
     def off(self) -> None:

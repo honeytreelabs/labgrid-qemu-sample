@@ -25,8 +25,10 @@ import httpx
 import service
 import uci
 from driver import CustomQEMUDriver, QEMUParams
+from func import retry_exc
 from labgrid import step, target_factory
 from labgrid.driver import ShellDriver, SSHDriver
+from labgrid.driver.exception import ExecutionError
 from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
@@ -118,9 +120,7 @@ class QEMUNetworkStrategy(Strategy):
     def update_network_service(self) -> None:
         assert self.qemu
 
-        if self.qemu.extra_args is not None and "accel kvm" not in self.qemu.extra_args:
-            time.sleep(5)  # wait for device to acquire IP address
-        new_address = self.get_remote_address()
+        new_address: str = retry_exc(self.get_remote_address, ExecutionError, "getting the remote address", timeout=20)
         networkservice = self.ssh.networkservice
 
         if networkservice.address != new_address:
