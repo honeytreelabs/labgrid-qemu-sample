@@ -16,7 +16,7 @@ targets:
         cpu: core2duo
         memory: 2G
         extra_args: >-
-          -device virtio-net-pci,netdev=net0 -netdev user,id=net0,net=10.0.2.0/24,dhcpstart=10.0.2.100
+          -device virtio-net-pci,netdev=net0 -netdev user,id=net0,net=192.168.187.0/24,dhcpstart=192.168.187.100,dns=192.168.187.3
         disk: disk-image
     - ShellDriver:
         login_prompt: 'Please press Enter to activate this console.'
