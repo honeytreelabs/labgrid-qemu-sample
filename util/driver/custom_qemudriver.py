@@ -264,7 +264,7 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
         self._cmd.append("stdio")
 
         self._cmd.append("-chardev")
-        self._cmd.append(f"socket,id=serialsocket,host=0.0.0.0,port=54321,server,wait=off")
+        self._cmd.append(f"socket,id=serialsocket,host=0.0.0.0,port=54321,server=on,wait=off")
         self._cmd.append("-serial")
         self._cmd.append("chardev:serialsocket")
 
