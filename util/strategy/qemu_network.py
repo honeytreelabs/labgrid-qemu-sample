@@ -172,10 +172,12 @@ class QEMUNetworkStrategy(Strategy):
 
         elif state == Status.ssh:
             self.transition(Status.shell)
+
             assert self.shell
-            uci.set(self.shell, "network.lan.proto", "dhcp")
-            uci.commit(self.shell, "network")
-            service.restart(self.shell, "network", wait=1)
+            if uci.get(self.shell, "network.lan.proto") != "dhcp":
+                uci.set(self.shell, "network.lan.proto", "dhcp")
+                uci.commit(self.shell, "network")
+                service.restart(self.shell, "network", wait=1)
             self.update_network_service()
 
         self.status = state
