@@ -1,0 +1,23 @@
+targets:
+  main:
+    resources:
+    - NetworkService:
+        # The actual address will be filled in by the strategy
+        address: ''
+        port: 22
+        username: root
+
+    drivers:
+    - StatefulQEMUDriver: {}
+    - ShellDriver:
+        login_prompt: 'Please press Enter to activate this console.'
+        username: 'root'
+        prompt: 'root@OpenWrt:[^ ]+# '
+        login_timeout: 200
+    - SSHDriver:
+        explicit_scp_mode: true
+    - QEMUStatefulStrategy: {}
+
+imports:
+- driver
+- strategy

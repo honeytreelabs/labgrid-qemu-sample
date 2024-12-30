@@ -23,3 +23,8 @@ def resolve(name: str) -> IPv4Address:
         return IPv4Address(socket.gethostbyname(name))
     except socket.gaierror as exc:
         raise NetworkError from exc
+
+
+def is_port_in_use(port: int, kind: socket.SocketKind = socket.SOCK_STREAM) -> bool:
+    with socket.socket(socket.AF_INET, kind) as s:
+        return s.connect_ex(("localhost", port)) == 0

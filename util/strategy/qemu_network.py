@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import enum
 import logging
 import os
 import subprocess
-import time
 import urllib.parse
 from pathlib import Path
 
@@ -33,12 +31,7 @@ from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
 
-
-class Status(enum.Enum):
-    unknown = 0
-    off = 1
-    shell = 2
-    ssh = 3
+from .status import Status
 
 
 @target_factory.reg_driver
@@ -51,12 +44,11 @@ class QEMUNetworkStrategy(Strategy):
         "params": "QEMUParams",
     }
 
+    status: Status = attr.ib(default=Status.unknown)
     qemu: CustomQEMUDriver | None = None
     shell: ShellDriver | None = None
     ssh: SSHDriver | None = None
     params: QEMUParams | None = None
-
-    status = attr.ib(default=Status.unknown)
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
@@ -158,15 +150,18 @@ class QEMUNetworkStrategy(Strategy):
 
         if state == Status.off:
             assert self.target
-            self.target.activate(self.qemu)
             assert self.qemu
+
+            self.target.deactivate(self.qemu)
             self.qemu.off()
 
         elif state == Status.shell:
             assert self.target
-            self.target.activate(self.qemu)
             assert self.qemu
+
+            # check if target is running
             self.qemu.on()
+            self.target.activate(self.qemu)
             self.target.activate(self.shell)
             assert self.shell
 

@@ -16,14 +16,12 @@ from labgrid.driver.exception import ExecutionError
 from labgrid.factory import target_factory
 from labgrid.protocol import ConsoleProtocol, PowerProtocol
 from labgrid.step import step
-from labgrid.util.qmp import QMPError, QMPMonitor
+from network import is_port_in_use
 from pexpect import TIMEOUT
 from process import kill_process
+from qmp import QMPMonitor
 
-
-def is_port_in_use(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("localhost", port)) == 0
+from .base_qemudriver import BaseQEMUDriver
 
 
 def start_ser2net_mux(port_conn: int, port_accept: int) -> subprocess.Popen:
@@ -50,7 +48,7 @@ def start_ser2net_mux(port_conn: int, port_accept: int) -> subprocess.Popen:
 
 @target_factory.reg_driver
 @attr.s(eq=False)
-class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtocol):
+class CustomQEMUDriver(BaseQEMUDriver, ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtocol):
     """
     The QEMUDriver implements an interface to start targets as qemu instances.
 
@@ -104,12 +102,9 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
-        self.status = 0
-        self.txdelay = None
+        self.status: int = 0
         self._child_qemu: subprocess.Popen | None = None
         self._child_ser2net: subprocess.Popen | None = None
-        self._socket = None
-        self._forwarded_ports = {}
         atexit.register(self._atexit)
 
     def _atexit(self) -> None:
@@ -225,53 +220,33 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
             cmd.append("-append")
             cmd.append(" ".join(boot_args))
 
+        cmd.append("-S")  # freeze CPU at startup
+
+        cmd.append("-qmp")
+        # cmd.append("stdio")
+        cmd.append("tcp:localhost:4444,server=on,wait=off")
+
+        cmd.append("-chardev")
+        cmd.append(f"socket,id=serialsocket,host=0.0.0.0,port=54321,server=on,wait=off")
+        cmd.append("-serial")
+        cmd.append("chardev:serialsocket")
+
         return cmd
-
-    def on_activate(self) -> None:
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        self._cmd = self.get_qemu_base_args()
-
-        self._cmd.append("-S")
-        self._cmd.append("-qmp")
-        self._cmd.append("stdio")
-
-        self._cmd.append("-chardev")
-        self._cmd.append(f"socket,id=serialsocket,host=0.0.0.0,port=54321,server=on,wait=off")
-        self._cmd.append("-serial")
-        self._cmd.append("chardev:serialsocket")
-
-    def on_deactivate(self) -> None:
-        assert self._socket
-
-        if self.status:
-            self.off()
-        self._socket.close()
-        self._socket = None
 
     @step()
     def on(self) -> None:
         """Start the QEMU subprocess, accept the unix socket connection and
         afterwards start the emulator using a QMP Command"""
-        assert self._socket
 
         if self.status:
             return
-        self.logger.info("Starting with: %s", " ".join(self._cmd))
-        self._child_qemu = subprocess.Popen(self._cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        cmd = self.get_qemu_base_args()
+        self.logger.info("Starting with: %s", " ".join(cmd))
+        self._child_qemu = subprocess.Popen(cmd)  # , stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         wait_for(lambda: is_port_in_use(54321), "port 54321 in use")
 
         self._child_ser2net = start_ser2net_mux(54321, 12345)
         wait_for(lambda: is_port_in_use(12345), "port 12345 in use")
-        self._socket.connect(("localhost", 12345))
-
-        try:
-            self.qmp = QMPMonitor(self._child_qemu.stdout, self._child_qemu.stdin)  # type: ignore
-        except QMPError as exc:
-            if self._child_qemu.poll() is not None:
-                self._child_qemu.communicate()
-                raise OSError(f"QEMU process terminated with exit code {self._child_qemu.returncode}") from exc
-            raise
 
         self.status = 1
 
@@ -304,11 +279,22 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
     @step(result=True, args=["command", "arguments"])
     def monitor_command(self, command: str, arguments: dict | None = None) -> str:
         """Execute a monitor_command via the QMP"""
-        if arguments is None:
-            arguments = {}
-        if not self.status:
-            raise ExecutionError("Can't use monitor command on non-running target")  # type: ignore
-        return self.qmp.execute(command, arguments)
+        socket_qmp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socket_qmp.connect(("localhost", 4444))
+        try:
+            qmp_file = socket_qmp.makefile("rw")
+
+            def write_flush(msg: str) -> None:
+                qmp_file.write(msg)
+                qmp_file.flush()
+
+            qmp = QMPMonitor(qmp_file.readline, write_flush)
+
+            if arguments is None:
+                arguments = {}
+            return qmp.execute(command, arguments)
+        finally:
+            socket_qmp.close()
 
     def _add_port_forward(
         self, proto: str, local_address: str, local_port: int, remote_address: str, remote_port: int
@@ -321,8 +307,11 @@ class CustomQEMUDriver(ConsoleExpectMixin, Driver, PowerProtocol, ConsoleProtoco
     def add_port_forward(
         self, proto: str, local_address: str, local_port: int, remote_address: str, remote_port: int
     ) -> None:
+        key = (proto, local_address, local_port)
+        if key in self._forwarded_ports:
+            return
         self._add_port_forward(proto, local_address, local_port, remote_address, remote_port)
-        self._forwarded_ports[(proto, local_address, local_port)] = (
+        self._forwarded_ports[key] = (
             proto,
             local_address,
             local_port,

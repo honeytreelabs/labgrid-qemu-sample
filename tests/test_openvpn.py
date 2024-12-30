@@ -36,15 +36,12 @@ def openvpn_server_env(generated_pki: PKI) -> Iterator[DockerComposeWrapper]:
 
 
 @pytest.mark.openvpn
-def test_openvpn(
-    openvpn_server_env: DockerComposeWrapper,
-    ssh_command: SSHDriver,
-    strategy: QEMUNetworkStrategy,
-) -> None:
+def test_openvpn(openvpn_server_env: DockerComposeWrapper, ssh_command: SSHDriver) -> None:
     def step_openwrt_install_openvpn() -> None:
-        run(ssh_command, "opkg update")
-        run(ssh_command, "opkg install openvpn-openssl")
-        run(ssh_command, "sync")
+        if "openvpn-openssl" not in run(ssh_command, "opkg list-installed"):
+            run(ssh_command, "opkg update")
+            run(ssh_command, "opkg install openvpn-openssl")
+            run(ssh_command, "sync")
 
     def step_openwrt_setup_openvpn() -> None:
         run(ssh_command, "mkdir -p /etc/openvpn")
@@ -71,9 +68,7 @@ def test_openvpn(
         tun0_ip = openwrt.get_ip_addr(ssh_command, "tun0")
         assert openvpn_server_env.exec("openvpn-server", f"ping -c 5 {tun0_ip}")
 
-    assert strategy.params
-    if strategy.params.overwrite:
-        step_openwrt_install_openvpn()
+    step_openwrt_install_openvpn()
     step_openwrt_setup_openvpn()
     step_openwrt_configure_firewall()
     step_verify_connected()
