@@ -163,16 +163,17 @@ class QEMUNetworkStrategy(Strategy):
             self.qemu.on()
             self.target.activate(self.qemu)
             self.target.activate(self.shell)
-            assert self.shell
-
-        elif state == Status.ssh:
-            self.transition(Status.shell)
 
             assert self.shell
             if uci.get(self.shell, "network.lan.proto") != "dhcp":
                 uci.set(self.shell, "network.lan.proto", "dhcp")
                 uci.commit(self.shell, "network")
                 service.restart(self.shell, "network", wait=1)
+
+        elif state == Status.ssh:
+            self.transition(Status.shell)
+
+            assert self.shell
             self.update_network_service()
 
         self.status = state
