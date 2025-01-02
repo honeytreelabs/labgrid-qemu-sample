@@ -16,22 +16,19 @@ import logging
 import os
 import subprocess
 import urllib.parse
-from functools import partial
 from pathlib import Path
 
 import attr
 import httpx
-import service
-import uci
 from driver import CustomQEMUDriver, QEMUParams
-from func import retry_exc, wait_for
+from func import retry_exc
 from labgrid import step, target_factory
 from labgrid.driver import ShellDriver, SSHDriver
 from labgrid.driver.exception import ExecutionError
 from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
-from openwrt import get_gateway_ip
+from openwrt import enable_dhcp
 
 from .status import Status
 
@@ -167,16 +164,12 @@ class QEMUNetworkStrategy(Strategy):
             self.target.activate(self.shell)
 
             assert self.shell
-            if uci.get(self.shell, "network.lan.proto") != "dhcp":
-                uci.set(self.shell, "network.lan.proto", "dhcp")
-                uci.commit(self.shell, "network")
-                service.restart(self.shell, "network", wait=1)
-            assert wait_for(partial(get_gateway_ip, self.shell), "gateway IP has been assigned", delay=1)
 
         elif state == Status.ssh:
             self.transition(Status.shell)
 
             assert self.shell
+            enable_dhcp(self.shell)
             self.update_network_service()
 
         self.status = state

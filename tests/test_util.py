@@ -52,8 +52,31 @@ def test_openwrt_get_gateway_ip_ok(ip_test: IPTest) -> None:
     assert openwrt.get_gateway_ip(runner) == ip_test.ip_addresses
 
 
+@dataclass
+class IPNameTest:
+    ip_output: str
+    if_name: str
+
+
+@pytest.mark.parametrize(
+    "ip_name_test",
+    [
+        IPNameTest(
+            """default via 192.168.187.2 dev br-lan  src 192.168.187.100
+192.168.187.0/24 dev br-lan scope link  src 192.168.187.100
+""",
+            "br-lan",
+        ),
+    ],
+)
+def test_openwrt_get_default_interface_device_name(ip_name_test: IPNameTest) -> None:
+    runner = MagicMock()
+    runner.run_check.side_effect = [ip_name_test.ip_output.split("\n")]
+    assert openwrt.get_default_interface_device_name(runner) == ip_name_test.if_name
+
+
 @patch("network.shell_run")
-def test_primary_host_ip_ok(mock_shell_run: MagicMock) -> None:
+def test_openwrt_primary_host_ip_ok(mock_shell_run: MagicMock) -> None:
     ip_r_s_output = json.dumps([{"dev": "eth0"}])
     ip_a_s_output = json.dumps([{"addr_info": [{"local": "192.168.1.1"}]}])
     mock_shell_run.side_effect = [ip_r_s_output, ip_a_s_output]
