@@ -2,10 +2,10 @@ import time
 from typing import Any, Callable, Type
 
 
-def wait_for(cond: Callable[[], bool], desc: str, delay: float = 0.1, timeout: float = 10) -> bool:
+def wait_for(cond: Callable[[], Any], desc: str, delay: float = 0.1, timeout: float = 10) -> Any:
     """Wait for a condition to become true within a specified timeout.
 
-    :param cond: A callable that returns a boolean, representing the condition to wait for.
+    :param cond: A callable that returns a result with its boolean value representing the condition to wait for.
     :param desc: A description of the condition being waited for.
     :param delay: Time in seconds to wait between condition checks.
     :param timeout: Timeout in seconds to wait for the condition to become true.
@@ -14,7 +14,7 @@ def wait_for(cond: Callable[[], bool], desc: str, delay: float = 0.1, timeout: f
     """
     start_time = time.time()
     while time.time() - start_time < timeout:
-        if result := cond():
+        if (result := cond()) and bool(result):
             return result
         time.sleep(delay)  # Sleep briefly to avoid busy-waiting
     raise TimeoutError(f"Timeout while waiting for condition to become true: {desc}.")

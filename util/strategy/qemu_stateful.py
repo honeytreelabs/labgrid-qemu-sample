@@ -1,14 +1,17 @@
+from functools import partial
+
 import attr
 import service
 import uci
 from driver import StatefulQEMUDriver
-from func import retry_exc
+from func import retry_exc, wait_for
 from labgrid import step, target_factory
 from labgrid.driver import ShellDriver, SSHDriver
 from labgrid.driver.exception import ExecutionError
 from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
+from openwrt import get_gateway_ip
 
 from .status import Status
 
@@ -89,6 +92,7 @@ class QEMUStatefulStrategy(Strategy):
                 uci.set(self.shell, "network.lan.proto", "dhcp")
                 uci.commit(self.shell, "network")
                 service.restart(self.shell, "network", wait=1)
+            assert wait_for(partial(get_gateway_ip, self.shell), "gateway IP has been assigned", delay=1)
 
         elif state == Status.ssh:
             self.transition(Status.shell)

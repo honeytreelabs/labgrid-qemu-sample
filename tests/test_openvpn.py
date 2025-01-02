@@ -64,8 +64,9 @@ def test_openvpn(openvpn_server_env: DockerComposeWrapper, ssh_command: SSHDrive
 
     def step_verify_connected() -> None:
         assert run(ssh_command, "ping -c 5 192.168.123.1")
-        tun0_ip = openwrt.get_ip_addr(ssh_command, "tun0")
-        assert openvpn_server_env.exec("openvpn-server", f"ping -c 5 {tun0_ip}")
+        tun0_ips = openwrt.get_ip_addr(ssh_command, "tun0")
+        assert len(tun0_ips) == 1
+        assert openvpn_server_env.exec("openvpn-server", f"ping -c 5 {tun0_ips[0]}")
 
     step_openwrt_install_openvpn()
     step_openwrt_setup_openvpn()
