@@ -6,6 +6,6 @@ from process import run
 
 
 def restart(shell: ShellDriver | SSHDriver, name: str, wait: Optional[float] = None) -> None:
-    run(shell, f"/etc/init.d/{name} restart")
+    run(shell, f"service {name} restart")
     if wait:
         time.sleep(wait)
