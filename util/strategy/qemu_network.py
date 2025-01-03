@@ -20,22 +20,14 @@ from pathlib import Path
 
 import attr
 import httpx
-from driver import CustomQEMUDriver, QEMUParams
-from func import retry_exc
 from labgrid import step, target_factory
-from labgrid.driver import ShellDriver, SSHDriver
-from labgrid.driver.exception import ExecutionError
-from labgrid.step import Step
-from labgrid.strategy import Strategy, StrategyError
-from labgrid.util import get_free_port
-from openwrt import enable_dhcp
 
-from .status import Status
+from .qemu_strategy import QEMUBaseStrategy
 
 
 @target_factory.reg_driver
 @attr.s(eq=False)
-class QEMUNetworkStrategy(Strategy):
+class QEMUNetworkStrategy(QEMUBaseStrategy):
     bindings = {
         "qemu": "CustomQEMUDriver",
         "shell": "ShellDriver",
@@ -43,15 +35,8 @@ class QEMUNetworkStrategy(Strategy):
         "params": "QEMUParams",
     }
 
-    status: Status = attr.ib(default=Status.unknown)
-    qemu: CustomQEMUDriver | None = None
-    shell: ShellDriver | None = None
-    ssh: SSHDriver | None = None
-    params: QEMUParams | None = None
-
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
-        assert self.ssh
         assert self.params
 
         self._download_image()  # keep .gz image
@@ -59,8 +44,11 @@ class QEMUNetworkStrategy(Strategy):
             logging.info(f"Overwriting image {self.disk_path}")
             self._extract_image()  # overwrite image if existing
 
-        self.__port_forward = None
-        self.__remote_port = self.ssh.networkservice.port
+    def on(self) -> None:
+        self.qemu.on()  # type: ignore
+
+    def off(self) -> None:
+        self.qemu.off()  # type: ignore
 
     @property
     def disk_url(self) -> str:
@@ -102,74 +90,3 @@ class QEMUNetworkStrategy(Strategy):
             gunzip_process.stdin.close()
 
             gunzip_process.wait()
-
-    @step(result=True)
-    def get_remote_address(self) -> str:
-        return str(self.shell.get_ip_addresses()[0].ip)
-
-    @step()
-    def update_network_service(self) -> None:
-        assert self.qemu
-
-        new_address: str = retry_exc(self.get_remote_address, ExecutionError, "getting the remote address", timeout=20)
-        networkservice = self.ssh.networkservice
-
-        if networkservice.address != new_address:
-            self.target.deactivate(self.ssh)
-
-            if self.__port_forward is not None:
-                self.qemu.remove_port_forward(*self.__port_forward)
-
-            local_port = get_free_port()
-            local_address = "127.0.0.1"
-
-            self.qemu.add_port_forward(
-                "tcp",
-                local_address,
-                local_port,
-                new_address,
-                self.__remote_port,
-            )
-            self.__port_forward = ("tcp", local_address, local_port)
-
-            networkservice.address = local_address
-            networkservice.port = local_port
-
-    @step(args=["state"])
-    def transition(self, state: Status | str, *, step: Step) -> None:
-        if not isinstance(state, Status):
-            state = Status[state]
-
-        if state == Status.unknown:
-            raise StrategyError(f"can not transition to {state}")
-
-        elif self.status == state:
-            step.skip("nothing to do")
-            return
-
-        if state == Status.off:
-            assert self.target
-            assert self.qemu
-
-            self.target.deactivate(self.qemu)
-            self.qemu.off()
-
-        elif state == Status.shell:
-            assert self.target
-            assert self.qemu
-
-            # check if target is running
-            self.qemu.on()
-            self.target.activate(self.qemu)
-            self.target.activate(self.shell)
-
-            assert self.shell
-
-        elif state == Status.ssh:
-            self.transition(Status.shell)
-
-            assert self.shell
-            enable_dhcp(self.shell)
-            self.update_network_service()
-
-        self.status = state

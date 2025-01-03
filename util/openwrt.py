@@ -34,10 +34,14 @@ def get_default_interface_device_name(runner: Runner) -> str:
     return matches[0]
 
 
-def enable_dhcp(runner: Runner) -> list[IPv4Address]:
+class NetworkConfigurationError(Exception):
+    pass
+
+
+def enable_dhcp(runner: Runner) -> None:
     if uci.get(runner, "network.lan.proto") != "dhcp":
         uci.set(runner, "network.lan.proto", "dhcp")
         uci.commit(runner, "network")
         service.restart(runner, "network", wait=1)
-    assert wait_for(partial(get_gateway_ip, runner), "gateway IP has been assigned", delay=1)
-    return get_ip_addr(runner, get_default_interface_device_name(runner))
+    if not wait_for(partial(get_gateway_ip, runner), "gateway IP has been assigned", delay=1):
+        raise NetworkConfigurationError("no gateway has been assigned on time.")
