@@ -53,6 +53,8 @@ COPY . /workspace
 WORKDIR /workspace
 
 # COPY ./requirements.txt /requirements.txt
-RUN uv sync
+RUN --mount=type=cache,target=/root/.cache <<EOT
+uv sync
+EOT
 
 CMD ["sleep", "infinity" ]
