@@ -13,6 +13,9 @@ build-job:
 
 lint-job:
   stage: lint
+  before_script:
+  - env | sort
+  - ENV_ID=${CI_PIPELINE_ID} docker compose up -d --force-recreate
   script:
   - docker compose exec -t debian ruff check .
   - docker compose exec -t debian ruff format --check .
@@ -21,7 +24,7 @@ test-job:
   stage: test
   before_script:
   - env | sort
-  - ENV_ID=${CI_PIPELINE_ID} docker compose up -d
+  - ENV_ID=${CI_PIPELINE_ID} docker compose up -d --force-recreate
   script:
   - ENV_ID=${CI_PIPELINE_ID} docker compose exec -ti debian pytest -svv --lg-env config/qemu.yaml --junit-xml=/tmp/result.xml -m 'not openvpn'
   - ENV_ID=${CI_PIPELINE_ID} docker compose cp debian:/tmp/result.xml result.xml

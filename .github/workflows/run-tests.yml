@@ -22,7 +22,7 @@ jobs:
       run: >-
         docker compose build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
     - name: Create and start the Docker Compose environment
-      run: docker compose up --detach
+      run: docker compose up --detach --force-recreate
     - name: Check formatting of sources
       run: >-
         docker compose exec -t debian ruff format --check .
