@@ -94,7 +94,7 @@ class BaseQEMUDriver(ConsoleExpectMixin, Driver, ConsoleProtocol):
             raise TIMEOUT(f"Timeout of {timeout:.2f} seconds exceeded")
         return res
 
-    def _write(self, data) -> int:  # type: ignore
+    def _write(self, data: bytes) -> int:  # type: ignore
         assert self._socket
 
         return self._socket.send(data)

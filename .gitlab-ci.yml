@@ -3,12 +3,19 @@ variables:
 
 stages:
 - build
+- lint
 - test
 
 build-job:
   stage: build
   script:
   - ENV_ID=${CI_PIPELINE_ID} docker compose build
+
+lint-job:
+  stage: lint
+  script:
+  - docker compose exec -t debian ruff check .
+  - docker compose exec -t debian ruff format --check .
 
 test-job:
   stage: test

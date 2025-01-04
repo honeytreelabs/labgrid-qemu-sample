@@ -1,11 +1,10 @@
 import time
-from typing import Optional
 
 from labgrid.driver import ShellDriver, SSHDriver
 from process import run
 
 
-def restart(shell: ShellDriver | SSHDriver, name: str, wait: Optional[float] = None) -> None:
+def restart(shell: ShellDriver | SSHDriver, name: str, wait: float | None = None) -> None:
     run(shell, f"service {name} restart")
     if wait:
         time.sleep(wait)

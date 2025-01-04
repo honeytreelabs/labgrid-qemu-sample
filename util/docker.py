@@ -1,7 +1,7 @@
 import json
 import subprocess
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 
 class DockerComposeWrapper:
@@ -41,7 +41,7 @@ class DockerComposeWrapper:
         service: str,
         command: str,
         detach: bool = False,
-        user: Optional[str] = None,
+        user: str | None = None,
     ) -> str:
         args = ["exec"]
         if detach:
@@ -51,7 +51,7 @@ class DockerComposeWrapper:
         args += [service] + command.split()
         return self._run_command(*args)
 
-    def kill(self, service: Optional[str] = None, signal: Optional[str] = None) -> None:
+    def kill(self, service: str | None = None, signal: str | None = None) -> None:
         args = ["kill"]
         if signal:
             args += ["-s", signal]
@@ -59,7 +59,7 @@ class DockerComposeWrapper:
             args.append(service)
         self._run_command(*args)
 
-    def ps(self, services: Optional[List[str]] = None) -> list[dict[str, Any]]:
+    def ps(self, services: list[str] | None = None) -> list[dict[str, Any]]:
         args = ["ps", "--format=json"]
         if services:
             args += services

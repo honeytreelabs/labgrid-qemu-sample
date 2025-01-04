@@ -1,8 +1,11 @@
 import time
-from typing import Any, Callable, Type
+from collections.abc import Callable
+from typing import TypeVar
+
+T = TypeVar("T")
 
 
-def wait_for(cond: Callable[[], Any], desc: str, delay: float = 0.1, timeout: float = 10) -> Any:
+def wait_for(cond: Callable[[], T], desc: str, delay: float = 0.1, timeout: float = 10) -> T:
     """Wait for a condition to become true within a specified timeout.
 
     :param cond: A callable that returns a result with its boolean value representing the condition to wait for.
@@ -20,9 +23,12 @@ def wait_for(cond: Callable[[], Any], desc: str, delay: float = 0.1, timeout: fl
     raise TimeoutError(f"Timeout while waiting for condition to become true: {desc}.")
 
 
+S = TypeVar("S")
+
+
 def retry_exc(
-    func: Callable[[], Any], exc_type: Type[BaseException], desc: str, delay: float = 1, timeout: float = 10
-) -> Any:
+    func: Callable[[], S], exc_type: type[BaseException], desc: str, delay: float = 1, timeout: float = 10
+) -> S:
     """Retry a function until it succeeds or a specific exception type is no longer raised.
 
     :param func: A callable to execute, which may raise the specified exception type.

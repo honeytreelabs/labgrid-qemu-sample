@@ -27,7 +27,7 @@ from .base_qemudriver import BaseQEMUDriver
 def start_ser2net_mux(port_conn: int, port_accept: int) -> subprocess.Popen:
     return subprocess.Popen(
         [
-            "ser2net",
+            "/usr/sbin/ser2net",
             "-n",
             "-d",
             "-Y",
@@ -227,7 +227,7 @@ class CustomQEMUDriver(BaseQEMUDriver, ConsoleExpectMixin, Driver, PowerProtocol
         cmd.append("tcp:localhost:4444,server=on,wait=off")
 
         cmd.append("-chardev")
-        cmd.append(f"socket,id=serialsocket,host=0.0.0.0,port=54321,server=on,wait=off")
+        cmd.append("socket,id=serialsocket,host=0.0.0.0,port=54321,server=on,wait=off")
         cmd.append("-serial")
         cmd.append("chardev:serialsocket")
 
@@ -341,7 +341,7 @@ class CustomQEMUDriver(BaseQEMUDriver, ConsoleExpectMixin, Driver, PowerProtocol
             raise TIMEOUT(f"Timeout of {timeout:.2f} seconds exceeded")
         return res
 
-    def _write(self, data) -> int:  # type: ignore
+    def _write(self, data: bytes) -> int:  # type: ignore
         assert self._socket
 
         return self._socket.send(data)

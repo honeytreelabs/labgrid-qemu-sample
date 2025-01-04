@@ -19,10 +19,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image
-      run: >
+      run: >-
         docker compose build --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) --build-arg DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
     - name: Create and start the Docker Compose environment
       run: docker compose up --detach
+    - name: Check formatting of sources
+      run: >-
+        docker compose exec -t debian ruff format --check .
+    - name: Lint sources
+      run: >-
+        docker compose exec -t debian ruff check .
     - name: Run the tests
       run: docker compose exec -ti debian pytest -svv --lg-env config/qemu.yaml --junit-xml=/tmp/result.xml
-
