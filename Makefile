@@ -8,7 +8,9 @@ test-docker:
 		--build-arg USER_ID=$$(id -u) \
 		--build-arg GROUP_ID=$$(id -g) \
 		--build-arg DOCKER_GID=$$(stat -c '%g' /var/run/docker.sock)
-	docker compose up -d
+	docker compose up -d --force-recreate
+	docker compose exec -ti debian ruff check .
+	docker compose exec -ti debian ruff format --check .
 	docker compose exec -ti debian pytest -svv --lg-env config/qemu.yaml
 
 .PHONY: test-local
