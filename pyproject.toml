@@ -73,6 +73,26 @@ ignore = [
 [tool.ruff.format]
 quote-style = "double"
 
+[tool.pytest.ini_options]
+minversion = "8.3"
+addopts = "--strict-markers --pdbcls=IPython.terminal.debugger:TerminalPdb"
+testpaths = [
+    "tests",
+]
+log_cli = true
+log_cli_level = "INFO"
+pythonpath = [
+    "util",
+]
+
+junit_suite_name = "Labgrid QEMU Sample"
+junit_log_passing_tests = true
+junit_logging = "all"
+
+markers = [
+    "openvpn: Tests OpenVPN related functionality",
+]
+
 [tool.uv.sources]
 labgrid = { git = "https://github.com/labgrid-project/labgrid", branch = "master" }
 
