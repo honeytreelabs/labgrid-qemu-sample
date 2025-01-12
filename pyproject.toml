@@ -5,11 +5,11 @@ description = "Labgrid QEMU Sample Code"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "httpx",
     "pytest==8.3.3",
-    "labgrid @ git+https://github.com/labgrid-project/labgrid.git@master",
     "ipdb==0.13.13",
     "cryptography==43.0.1",
+    "labgrid",
+    "httpx>=0.28.1",
 ]
 
 [tool.ruff]
@@ -72,6 +72,9 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.uv.sources]
+labgrid = { git = "https://github.com/labgrid-project/labgrid", branch = "master" }
 
 [dependency-groups]
 dev = [
