@@ -1,6 +1,8 @@
 import json
 import socket
+from contextlib import closing
 from ipaddress import IPv4Address
+from socket import AF_INET, SOCK_DGRAM, SOCK_STREAM
 
 from process import shell_run
 
@@ -28,3 +30,15 @@ def resolve(name: str) -> IPv4Address:
 def is_port_in_use(port: int, kind: socket.SocketKind = socket.SOCK_STREAM) -> bool:
     with socket.socket(socket.AF_INET, kind) as s:
         return s.connect_ex(("localhost", port)) == 0
+
+
+def get_free_tcp_port() -> int:
+    with closing(socket.socket(AF_INET, SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+
+def get_free_udp_port() -> int:
+    with closing(socket.socket(AF_INET, SOCK_DGRAM)) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
