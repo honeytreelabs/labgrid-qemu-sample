@@ -59,6 +59,15 @@ class LocalComposeRenderer(ComposeRenderer):
                 else:
                     logging.warning(f"Could not parse port expression {port}")
 
+            if "networks" in service_data:
+                service_data["networks"] = [
+                    network for network in service_data["networks"] if network != "shared_network"
+                ]
+
+        networks: dict = self._compose_data.get("networks", {})
+        if "shared_network" in networks:
+            del networks["shared_network"]
+
     def map_service(self, hostname: str) -> str:
         del hostname  # unused
         return str(primary_host_ip())
@@ -82,7 +91,7 @@ class DockerInDockerComposeRenderer(ComposeRenderer):
                 )
 
             ports: list[str] = service_data.get("ports", [])
-            for idx, port in enumerate(ports):
+            for port in ports:
                 match = DOCKER_PORT_REGEX.match(port)
                 if match:
                     name = match.group(1)
@@ -90,9 +99,10 @@ class DockerInDockerComposeRenderer(ComposeRenderer):
                     proto = match.group(4)
                     proto_str = proto if proto else "tcp"
                     self._port_mappings[proto_str][name] = port
-                    ports[idx] = f"{port}:{port}/{proto_str}"
                 else:
                     logging.warning(f"Could not parse port expression {port}")
+            if ports:
+                del service_data["ports"]
 
     def map_service(self, hostname: str) -> str:
         return hostname
