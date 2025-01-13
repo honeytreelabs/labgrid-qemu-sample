@@ -16,16 +16,23 @@ def test_docker_compose_env_ok(in_docker_container: MagicMock) -> None:
 
 
 @patch("docker.primary_host_ip")
-def test_docker_compose_renderer_local(primary_host_ip: MagicMock) -> None:
+@patch("docker.in_docker_container")
+def test_docker_compose_renderer_local(in_docker_container: MagicMock, primary_host_ip: MagicMock) -> None:
     primary_host_ip.return_value = IPv4Address("1.2.3.4")
+    in_docker_container.return_value = False
 
     renderer = LocalComposeRenderer(OPENVPN_COMPOSE_TEMPLATE)
     assert not renderer.port_mappings["tcp"]
     assert len(renderer.port_mappings["udp"]) == 1  # openvpn port
-    assert renderer.map_service("openvpn-server") == "1.2.3.4"
+    assert renderer.map_service("openvpn-server") == IPv4Address("1.2.3.4")
 
 
-def test_docker_compose_renderer_dind() -> None:
+@patch("docker.resolve")
+@patch("docker.in_docker_container")
+def test_docker_compose_renderer_dind(in_docker_container: MagicMock, resolve: MagicMock) -> None:
+    resolve.return_value = IPv4Address("5.6.7.8")
+    in_docker_container.return_value = True
+
     renderer = DockerInDockerComposeRenderer(OPENVPN_COMPOSE_TEMPLATE)
     assert renderer.port_mappings["udp"]["openvpn"] == 1194
-    assert renderer.map_service("openvpn-server") == "openvpn-server"
+    assert renderer.map_service("openvpn-server") == IPv4Address("5.6.7.8")

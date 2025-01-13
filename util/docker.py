@@ -3,12 +3,13 @@ import logging
 import re
 import shutil
 import subprocess
+from ipaddress import IPv4Address
 from pathlib import Path
 from typing import Any
 
 import yaml
 from fs import create_temp_dir
-from network import get_free_tcp_port, get_free_udp_port, primary_host_ip
+from network import get_free_tcp_port, get_free_udp_port, primary_host_ip, resolve
 
 
 def in_docker_container() -> bool:
@@ -31,7 +32,7 @@ class ComposeRenderer:
     def port_mappings(self) -> PortMappings:
         return self._port_mappings
 
-    def map_service(self, hostname: str) -> str:
+    def map_service(self, hostname: str) -> str | IPv4Address:
         del hostname  # unused
         raise NotImplementedError()
 
@@ -68,9 +69,9 @@ class LocalComposeRenderer(ComposeRenderer):
         if "shared_network" in networks:
             del networks["shared_network"]
 
-    def map_service(self, hostname: str) -> str:
+    def map_service(self, hostname: str) -> str | IPv4Address:
         del hostname  # unused
-        return str(primary_host_ip())
+        return primary_host_ip()
 
 
 DOCKER_PORT_REGEX: re.Pattern = re.compile(
@@ -104,8 +105,11 @@ class DockerInDockerComposeRenderer(ComposeRenderer):
             if ports:
                 del service_data["ports"]
 
-    def map_service(self, hostname: str) -> str:
-        return hostname
+    def map_service(self, hostname: str) -> str | IPv4Address:
+        # currently, it seems the OpenWrt in QEMU DNS resolver is not able to forward
+        # its requests to the hosts DNS server; but as routing works in general,
+        # when mapping a hostname, we use the host's DNS resolver directly
+        return resolve(hostname)
 
 
 def create_compose_renderer(compose_template: str) -> ComposeRenderer:
@@ -133,7 +137,7 @@ class DockerComposeWrapper:
     def port_mappings(self) -> PortMappings:
         return self._compose.port_mappings
 
-    def map_hostname(self, hostname: str) -> str:
+    def map_hostname(self, hostname: str) -> str | IPv4Address:
         return self._compose.map_service(hostname)
 
     def _run_command(self, args: list[str] | str) -> str:
