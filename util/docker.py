@@ -136,10 +136,9 @@ class DockerComposeWrapper:
     def map_hostname(self, hostname: str) -> str:
         return self._compose.map_service(hostname)
 
-    def _run_command(self, *args: str) -> str:
-        command = ["docker", "compose"] + list(args)
+    def _run_command(self, args: list[str] | str) -> str:
         result = subprocess.run(
-            command,
+            args,
             cwd=self._tmpdir,
             check=True,
             capture_output=True,
@@ -147,13 +146,16 @@ class DockerComposeWrapper:
         )
         return result.stdout
 
+    def _run_docker_compose(self, args: list[str]) -> str:
+        return self._run_command(["docker", "compose"] + args)
+
     def up(self, detach: bool = True, build: bool = False) -> None:
         args = ["up"]
         if detach:
             args.append("-d")
         if build:
             args.append("--build")
-        self._run_command(*args)
+        self._run_docker_compose(args)
 
     def rm(self, force: bool = False, stop: bool = False, volumes: bool = False) -> None:
         args = ["rm"]
@@ -163,7 +165,7 @@ class DockerComposeWrapper:
             args.append("-s")
         if volumes:
             args.append("-v")
-        self._run_command(*args)
+        self._run_docker_compose(args)
 
     def exec(
         self,
@@ -178,7 +180,7 @@ class DockerComposeWrapper:
         if user:
             args += ["-u", user]
         args += [service] + command.split()
-        return self._run_command(*args)
+        return self._run_docker_compose(args)
 
     def kill(self, service: str | None = None, signal: str | None = None) -> None:
         args = ["kill"]
@@ -186,7 +188,7 @@ class DockerComposeWrapper:
             args += ["-s", signal]
         if service:
             args.append(service)
-        self._run_command(*args)
+        self._run_docker_compose(args)
 
     def cleanup(self) -> None:
         shutil.rmtree(self._tmpdir)
@@ -195,7 +197,7 @@ class DockerComposeWrapper:
         args = ["ps", "--format=json"]
         if services:
             args += services
-        raw = self._run_command(*args)
+        raw = self._run_docker_compose(args)
         try:
             return json.loads(f"[{raw}]")
         except json.decoder.JSONDecodeError:
