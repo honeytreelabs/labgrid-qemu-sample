@@ -25,10 +25,7 @@ def test_docker_compose_renderer_local(primary_host_ip: MagicMock) -> None:
     assert renderer.map_service("openvpn-server") == "1.2.3.4"
 
 
-@patch("docker.resolve")
-def test_docker_compose_renderer_dind(resolve: MagicMock) -> None:
-    resolve.return_value = "mapped-service-name"
-
+def test_docker_compose_renderer_dind() -> None:
     renderer = DockerInDockerComposeRenderer(OPENVPN_COMPOSE_TEMPLATE)
     assert renderer.port_mappings["udp"]["openvpn"] == 1194
-    assert renderer.map_service("openvpn-server") == "mapped-service-name"
+    assert renderer.map_service("openvpn-server") == "openvpn-server"

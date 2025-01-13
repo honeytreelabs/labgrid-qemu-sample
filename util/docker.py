@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 from fs import create_temp_dir
-from network import NetworkError, get_free_tcp_port, get_free_udp_port, primary_host_ip, resolve
+from network import get_free_tcp_port, get_free_udp_port, primary_host_ip
 
 
 def in_docker_container() -> bool:
@@ -95,11 +95,7 @@ class DockerInDockerComposeRenderer(ComposeRenderer):
                     logging.warning(f"Could not parse port expression {port}")
 
     def map_service(self, hostname: str) -> str:
-        try:
-            return str(resolve(hostname))
-        except NetworkError:
-            logging.info("Could not resolve openvpn-server address. Trying published port on host.")
-            return str(primary_host_ip())
+        return hostname
 
 
 def create_compose_renderer(compose_template: str) -> ComposeRenderer:
