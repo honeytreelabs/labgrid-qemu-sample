@@ -45,3 +45,10 @@ def enable_dhcp(runner: Runner) -> None:
         service.restart(runner, "network", wait=1)
     if not wait_for(partial(get_gateway_ip, runner), "gateway IP has been assigned", delay=1):
         raise NetworkConfigurationError("no gateway has been assigned on time.")
+
+
+def enable_local_dns_queries(runner: Runner) -> None:
+    uci.set(runner, "dhcp.@dnsmasq[0].domainneeded", "0")
+    uci.set(runner, "dhcp.@dnsmasq[0].rebind_protection", "0")
+    uci.commit(runner, "dhcp")
+    service.restart(runner, "dnsmasq")

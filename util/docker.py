@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 from fs import create_temp_dir
-from network import get_free_tcp_port, get_free_udp_port, primary_host_ip, resolve
+from network import get_free_tcp_port, get_free_udp_port, primary_host_ip
 
 
 def in_docker_container() -> bool:
@@ -106,10 +106,7 @@ class DockerInDockerComposeRenderer(ComposeRenderer):
                 del service_data["ports"]
 
     def map_service(self, hostname: str) -> str | IPv4Address:
-        # currently, it seems the OpenWrt in QEMU DNS resolver is not able to forward
-        # its requests to the hosts DNS server; but as routing works in general,
-        # when mapping a hostname, we use the host's DNS resolver directly
-        return resolve(hostname)
+        return hostname
 
 
 def create_compose_renderer(compose_template: str) -> ComposeRenderer:

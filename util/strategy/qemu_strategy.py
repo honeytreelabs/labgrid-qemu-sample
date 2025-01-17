@@ -9,7 +9,7 @@ from labgrid.driver.exception import ExecutionError
 from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
-from openwrt import enable_dhcp
+from openwrt import enable_dhcp, enable_local_dns_queries
 
 from .status import Status
 
@@ -107,6 +107,7 @@ class QEMUBaseStrategy(ABC, Strategy):
 
             assert self.shell
             enable_dhcp(self.shell)
+            enable_local_dns_queries(self.shell)
 
         elif status == Status.ssh:
             self.transition(Status.internet)
