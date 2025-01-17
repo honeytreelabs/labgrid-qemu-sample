@@ -26,6 +26,10 @@ qemu_demo.gif: qemu_demo.cast
 img/qemu_demo-opt.gif: qemu_demo.gif
 	gifsicle --lossy=80 -k 128 -O2 -Okeep-empty $< -o $@
 
+.PHONY: format
+format:
+	ruff format
+
 .PHONY: check-format
 check-format:
 	ruff format --check
@@ -33,3 +37,7 @@ check-format:
 .PHONY: lint
 lint:
 	ruff check
+
+.PHONY: lint-fix
+lint-fix:
+	ruff check --fix --unsafe-fixes
