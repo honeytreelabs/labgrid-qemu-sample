@@ -3,6 +3,7 @@ import logging
 import re
 import shutil
 import subprocess
+from collections.abc import Callable
 from ipaddress import IPv4Address
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,7 @@ def in_docker_container() -> bool:
 PortMappings = dict[str, dict[str, int]]
 
 
-class ComposeRenderer:
+class ComposeAdapter:
     def __init__(self, compose_template: str) -> None:
         self._compose_data: dict = yaml.safe_load(compose_template)
         self._port_mappings: PortMappings = {"tcp": {}, "udp": {}}
@@ -37,7 +38,7 @@ class ComposeRenderer:
         raise NotImplementedError()
 
 
-class LocalComposeRenderer(ComposeRenderer):
+class LocalComposeAdapter(ComposeAdapter):
     def __init__(self, compose_template: str) -> None:
         super().__init__(compose_template)
         services = self._compose_data.get("services", {})
@@ -80,7 +81,7 @@ DOCKER_PORT_REGEX: re.Pattern = re.compile(
 )
 
 
-class DockerInDockerComposeRenderer(ComposeRenderer):
+class DockerInDockerComposeAdapter(ComposeAdapter):
     def __init__(self, compose_template: str) -> None:
         super().__init__(compose_template)
         services = self._compose_data.get("services", {})
@@ -109,16 +110,16 @@ class DockerInDockerComposeRenderer(ComposeRenderer):
         return hostname
 
 
-def create_compose_renderer(compose_template: str) -> ComposeRenderer:
+def create_compose_adapter(compose_template: str) -> ComposeAdapter:
     if in_docker_container():
-        return DockerInDockerComposeRenderer(compose_template)
-    return LocalComposeRenderer(compose_template)
+        return DockerInDockerComposeAdapter(compose_template)
+    return LocalComposeAdapter(compose_template)
 
 
-class DockerComposeWrapper:
+class ComposeEnv:
     def __init__(self, compose_template: str, files: dict[str, bytes]) -> None:
         self._tmpdir = create_temp_dir()
-        self._compose = create_compose_renderer(compose_template)
+        self._compose = create_compose_adapter(compose_template)
         logging.info(f"Rendered compose YAML:\n{self._compose.rendered}")
         (Path(self._tmpdir) / "compose.yaml").write_text(
             self._compose.rendered,
@@ -205,3 +206,6 @@ class DockerComposeWrapper:
             # see: https://github.com/docker/compose/issues/10958
             comma_separated = ",".join(raw.strip().split("\n"))
             return json.loads(f"[{comma_separated}]")
+
+
+ComposeEnvFactory = Callable[[str, dict[str, bytes]], ComposeEnv]

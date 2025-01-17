@@ -1,9 +1,9 @@
-from collections.abc import Iterator
+from ipaddress import IPv4Address
 from pathlib import Path
 
 import openwrt
 import pytest
-from docker import DockerComposeWrapper
+from docker import ComposeEnv, ComposeEnvFactory
 from labgrid.driver import SSHDriver
 from process import run
 from ssh import put_file
@@ -18,8 +18,8 @@ def pki() -> PKI:
 
 
 @pytest.fixture(scope="module")
-def openvpn_server_env(pki: PKI) -> Iterator[DockerComposeWrapper]:
-    compose = DockerComposeWrapper(
+def openvpn_server_env(compose_env_factory: ComposeEnvFactory, pki: PKI) -> ComposeEnv:
+    return compose_env_factory(
         (OPENVPN_DIR / "compose.yaml").read_text(),
         {
             "ca_cert.pem": pki.ca_cert,
@@ -30,15 +30,26 @@ def openvpn_server_env(pki: PKI) -> Iterator[DockerComposeWrapper]:
             "Dockerfile.openvpn": (OPENVPN_DIR / "Dockerfile.openvpn").read_bytes(),
         },
     )
-    compose.up(build=True)
-    yield compose
-    compose.rm(force=True, stop=True)
-    compose.kill()
-    compose.cleanup()
+
+
+@pytest.fixture(scope="module")
+def openvpn_server_name(openvpn_server_env: ComposeEnv) -> str | IPv4Address:
+    return openvpn_server_env.map_hostname("openvpn-server")
+
+
+@pytest.fixture(scope="module")
+def openvpn_server_port(openvpn_server_env: ComposeEnv) -> int:
+    return openvpn_server_env.port_mappings["udp"]["openvpn"]
 
 
 @pytest.mark.openvpn
-def test_openvpn(pki: PKI, openvpn_server_env: DockerComposeWrapper, ssh_command: SSHDriver) -> None:
+def test_openvpn(
+    pki: PKI,
+    openvpn_server_env: ComposeEnv,
+    openvpn_server_name: str | IPv4Address,
+    openvpn_server_port: int,
+    ssh_command: SSHDriver,
+) -> None:
     def step_openwrt_install_openvpn() -> None:
         if "openvpn-openssl" not in run(ssh_command, "opkg list-installed"):
             run(ssh_command, "opkg update")
@@ -51,8 +62,6 @@ def test_openvpn(pki: PKI, openvpn_server_env: DockerComposeWrapper, ssh_command
         put_file(ssh_command, Path("/etc") / "openvpn" / "client.crt", pki.client_cert)
         put_file(ssh_command, Path("/etc") / "openvpn" / "client.key", pki.client_key)
         run(ssh_command, "uci set openvpn.sample_client.enabled='1'")
-        openvpn_server_name = openvpn_server_env.map_hostname("openvpn-server")
-        openvpn_server_port = openvpn_server_env.port_mappings["udp"]["openvpn"]
         run(ssh_command, f"uci set openvpn.sample_client.remote='{openvpn_server_name} {openvpn_server_port}'")
         run(ssh_command, "uci commit openvpn")
         run(ssh_command, "/etc/init.d/openvpn restart sample_client")
