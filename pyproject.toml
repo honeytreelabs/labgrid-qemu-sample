@@ -57,9 +57,6 @@ ignore = [
     # too-many-arguments (PLR0913)
     # https://docs.astral.sh/ruff/rules/too-many-arguments/
     "PLR0913",
-    # missing-type-self (ANN101)# - DEPRECATED, hence ignored
-    # https://docs.astral.sh/ruff/rules/missing-type-self/
-    "ANN101",
     # assert (S101)#
     # https://docs.astral.sh/ruff/rules/assert/
     # Reason: pytest uses assertions
