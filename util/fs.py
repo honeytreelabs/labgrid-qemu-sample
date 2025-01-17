@@ -4,6 +4,9 @@ import string
 import tempfile
 from pathlib import Path
 
+from labgrid.driver import ShellDriver, SSHDriver
+from process import run
+
 
 def create_temp_dir() -> Path:
     while True:
@@ -16,3 +19,11 @@ def create_temp_dir() -> Path:
             return temp_path
         except FileExistsError:
             continue
+
+
+def mkdir(shell: ShellDriver | SSHDriver, path: Path | str) -> None:
+    run(shell, f"mkdir -p {path}")
+
+
+def sync(shell: ShellDriver | SSHDriver) -> None:
+    run(shell, "sync")

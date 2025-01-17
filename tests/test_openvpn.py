@@ -2,8 +2,12 @@ from ipaddress import IPv4Address
 from pathlib import Path
 
 import openwrt
+import opkg
 import pytest
+import service
+import uci
 from docker import ComposeAdapter, ComposeEnv, ComposeEnvFactory
+from fs import mkdir, sync
 from labgrid.driver import SSHDriver
 from process import run
 from ssh import put_file
@@ -51,25 +55,25 @@ def test_openvpn(
     ssh_command: SSHDriver,
 ) -> None:
     def step_openwrt_install_openvpn() -> None:
-        if "openvpn-openssl" not in run(ssh_command, "opkg list-installed"):
-            run(ssh_command, "opkg update")
-            run(ssh_command, "opkg install openvpn-openssl")
-            run(ssh_command, "sync")
+        if not opkg.is_package_installed(ssh_command, "openvpn-openssl"):
+            opkg.update(ssh_command)
+            opkg.install(ssh_command, "openvpn-openssl")
+            sync(ssh_command)
 
     def step_openwrt_setup_openvpn() -> None:
-        run(ssh_command, "mkdir -p /etc/openvpn")
+        mkdir(ssh_command, "/etc/openvpn")
         put_file(ssh_command, Path("/etc") / "openvpn" / "ca.crt", pki.ca_cert)
         put_file(ssh_command, Path("/etc") / "openvpn" / "client.crt", pki.client_cert)
         put_file(ssh_command, Path("/etc") / "openvpn" / "client.key", pki.client_key)
-        run(ssh_command, "uci set openvpn.sample_client.enabled='1'")
-        run(ssh_command, f"uci set openvpn.sample_client.remote='{openvpn_server_name} {openvpn_server_port}'")
-        run(ssh_command, "uci commit openvpn")
-        run(ssh_command, "/etc/init.d/openvpn restart sample_client")
+        uci.set(ssh_command, "openvpn.sample_client.enabled", True)
+        uci.set(ssh_command, "openvpn.sample_client.remote", f"{openvpn_server_name} {openvpn_server_port}")
+        uci.commit(ssh_command, "openvpn")
+        service.restart(ssh_command, "openvpn", "sample_client")
 
     def step_openwrt_configure_firewall() -> None:
-        run(ssh_command, 'uci add_list firewall.@zone[0].device="tun0"')
-        run(ssh_command, "uci commit firewall")
-        run(ssh_command, "service firewall restart")
+        uci.add_list(ssh_command, "firewall.@zone[0].device", "tun0")
+        uci.commit(ssh_command, "firewall")
+        service.restart(ssh_command, "firewall")
 
     def step_verify_connected() -> None:
         assert run(ssh_command, "ping -c 5 192.168.123.1")
