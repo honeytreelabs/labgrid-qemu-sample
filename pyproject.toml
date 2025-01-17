@@ -99,7 +99,7 @@ labgrid = { git = "https://github.com/labgrid-project/labgrid", branch = "master
 [dependency-groups]
 dev = [
     "pyright>=1.1.391",
-    "ruff>=0.6.8",
+    "ruff==0.9.2",
 ]
 
 [tool.ruff.lint.flake8-pytest-style]
