@@ -1,17 +1,15 @@
 import logging
-import random
-import string
 import tempfile
 from pathlib import Path
 
+from crypto import generate_random_string
 from labgrid.driver import ShellDriver, SSHDriver
 from process import run
 
 
 def create_temp_dir() -> Path:
     while True:
-        # we don't need a super-secure cryptographic PRNG
-        random_name = "".join(random.choices(string.ascii_letters + string.digits, k=12))  # noqa: S311
+        random_name = generate_random_string(12)
         temp_path = Path(tempfile.gettempdir()) / random_name
         logging.info(f"Creating temporary directory {temp_path}.")
         try:
