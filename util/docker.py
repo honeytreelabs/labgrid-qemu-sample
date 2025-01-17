@@ -33,9 +33,11 @@ class ComposeAdapter:
     def port_mappings(self) -> PortMappings:
         return self._port_mappings
 
-    def map_service(self, hostname: str) -> str | IPv4Address:
-        del hostname  # unused
-        raise NotImplementedError()
+    @staticmethod
+    def map_service(hostname: str) -> str | IPv4Address:
+        if in_docker_container():
+            return hostname
+        return primary_host_ip()
 
 
 class LocalComposeAdapter(ComposeAdapter):
@@ -70,10 +72,6 @@ class LocalComposeAdapter(ComposeAdapter):
         if "shared_network" in networks:
             del networks["shared_network"]
 
-    def map_service(self, hostname: str) -> str | IPv4Address:
-        del hostname  # unused
-        return primary_host_ip()
-
 
 DOCKER_PORT_REGEX: re.Pattern = re.compile(
     r"\{([\w-]+)\}:(\d+)(/((tcp)|(udp)))?",
@@ -105,9 +103,6 @@ class DockerInDockerComposeAdapter(ComposeAdapter):
                     logging.warning(f"Could not parse port expression {port}")
             if ports:
                 del service_data["ports"]
-
-    def map_service(self, hostname: str) -> str | IPv4Address:
-        return hostname
 
 
 def create_compose_adapter(compose_template: str) -> ComposeAdapter:

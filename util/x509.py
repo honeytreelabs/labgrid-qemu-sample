@@ -1,5 +1,6 @@
 import datetime
 from dataclasses import dataclass
+from ipaddress import IPv4Address
 from pathlib import Path
 
 from cryptography import x509
@@ -22,7 +23,12 @@ def create_certificate(
     is_ca: bool = False,
     is_server_cert: bool = False,
     is_client_cert: bool = False,
+    subject_alternative_names: str | IPv4Address | list[str | IPv4Address] | None = None,
 ) -> Certificate:
+    if subject_alternative_names is None:
+        subject_alternative_names = []
+    elif not isinstance(subject_alternative_names, list):
+        subject_alternative_names = [subject_alternative_names]
     subject = x509.Name(
         [
             x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
@@ -56,17 +62,24 @@ def create_certificate(
 
     cert_builder = cert_builder.add_extension(x509.BasicConstraints(ca=is_ca, path_length=None), critical=True)
 
-    ekus = []
     if is_server_cert:
-        ekus.append(ExtendedKeyUsageOID.SERVER_AUTH)
-    if is_client_cert:
-        ekus.append(ExtendedKeyUsageOID.CLIENT_AUTH)
-
-    if ekus:
         cert_builder = cert_builder.add_extension(
-            x509.ExtendedKeyUsage(ekus),
-            critical=False,
+            x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]), critical=False
         )
+
+    if is_client_cert:
+        cert_builder = cert_builder.add_extension(
+            x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH]), critical=False
+        )
+
+    if subject_alternative_names:
+        san_list = []
+        for subject_alt_name in subject_alternative_names:
+            if isinstance(subject_alt_name, str):
+                san_list.append(x509.DNSName(subject_alt_name))
+            if type(subject_alt_name) is IPv4Address:
+                san_list.append(x509.IPAddress(subject_alt_name))
+        cert_builder = cert_builder.add_extension(x509.SubjectAlternativeName(san_list), critical=False)
 
     certificate = cert_builder.sign(
         private_key=issuer_private_key,
@@ -109,7 +122,9 @@ class PKI:
     client_cert: bytes
 
 
-def create_pki() -> PKI:
+def create_pki(
+    subject_alternative_names: str | IPv4Address | list[str | IPv4Address] | None = None,
+) -> PKI:
     ca_key = generate_private_key()
     ca_cert = create_certificate(
         subject_name="Root CA",
@@ -127,6 +142,7 @@ def create_pki() -> PKI:
         issuer_private_key=ca_key,
         is_ca=False,
         is_server_cert=True,
+        subject_alternative_names=subject_alternative_names,
     )
 
     client_key = generate_private_key()

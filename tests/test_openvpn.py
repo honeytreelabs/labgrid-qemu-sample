@@ -3,7 +3,7 @@ from pathlib import Path
 
 import openwrt
 import pytest
-from docker import ComposeEnv, ComposeEnvFactory
+from docker import ComposeAdapter, ComposeEnv, ComposeEnvFactory
 from labgrid.driver import SSHDriver
 from process import run
 from ssh import put_file
@@ -14,7 +14,7 @@ OPENVPN_DIR = Path(__file__).parent / "openvpn"
 
 @pytest.fixture(scope="module")
 def pki() -> PKI:
-    return create_pki()
+    return create_pki(ComposeAdapter.map_service("openvpn-server"))
 
 
 @pytest.fixture(scope="module")
