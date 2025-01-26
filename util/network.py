@@ -56,5 +56,5 @@ def is_tcp_endpoint_reachable(host: str, port: int, timeout: float = 1.0) -> boo
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
-    except (socket.timeout, socket.error):
+    except (TimeoutError, OSError):
         return False
