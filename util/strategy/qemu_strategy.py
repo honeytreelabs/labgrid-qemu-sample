@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
 import attr
-from driver import BaseQEMUDriver, QEMUParams
 from func import retry_exc
+from driver import BaseQEMUDriver, PortForwarding, QEMUParams
 from labgrid import step
 from labgrid.driver import ShellDriver, SSHDriver
 from labgrid.driver.exception import ExecutionError
@@ -23,8 +23,8 @@ class QEMUBaseStrategy(ABC, Strategy):
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
-        self._port_forward: tuple[str, str, int] | None = None
-        self._remote_port: int = self.ssh.networkservice.port
+        self._ssh_port_forwarding: PortForwarding | None = None
+        self._ssh_remote_port: int = self.ssh.networkservice.port
 
     @abstractmethod
     def on(self) -> None:
@@ -40,12 +40,16 @@ class QEMUBaseStrategy(ABC, Strategy):
 
         return str(self.shell.get_ip_addresses()[0].ip)
 
+    @property
+    def ssh_port_forwarding(self) -> PortForwarding | None:
+        return self._ssh_port_forwarding
+
     @step()
     def update_network_service(self) -> None:
         assert self.target
         assert self.qemu
         assert self.ssh
-        assert self._remote_port
+        assert self._ssh_remote_port
 
         new_address: str = retry_exc(self.get_remote_address, ExecutionError, "getting the remote address", timeout=20)
         networkservice = self.ssh.networkservice
@@ -53,20 +57,18 @@ class QEMUBaseStrategy(ABC, Strategy):
         if networkservice.address != new_address:
             self.target.deactivate(self.ssh)
 
-            if self._port_forward is not None:
-                self.qemu.remove_port_forward(*self._port_forward)
+            if self._ssh_port_forwarding is not None:
+                self.qemu.remove_port_forward(self._ssh_port_forwarding.local)
 
             local_port = get_free_port()
             local_address = "127.0.0.1"
 
-            self.qemu.add_port_forward(
-                "tcp",
+            self._ssh_port_forwarding = self.qemu.add_port_forward(
                 local_address,
                 local_port,
                 new_address,
-                self._remote_port,
+                self._ssh_remote_port,
             )
-            self._port_forward = ("tcp", local_address, local_port)
 
             networkservice.address = local_address
             networkservice.port = local_port

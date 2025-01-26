@@ -251,8 +251,8 @@ class CustomQEMUDriver(BaseQEMUDriver, ConsoleExpectMixin, Driver, PowerProtocol
         self.status = 1
 
         # Restore port forwards
-        for v in self._forwarded_ports.values():
-            self._add_port_forward(*v)
+        for k, v in self._forwarded_ports.items():
+            self._add_port_forward(k.addr, k.port, v.addr, v.port)
 
         self.monitor_command("cont")
 
@@ -295,36 +295,6 @@ class CustomQEMUDriver(BaseQEMUDriver, ConsoleExpectMixin, Driver, PowerProtocol
             return qmp.execute(command, arguments)
         finally:
             socket_qmp.close()
-
-    def _add_port_forward(
-        self, proto: str, local_address: str, local_port: int, remote_address: str, remote_port: int
-    ) -> None:
-        self.monitor_command(
-            "human-monitor-command",
-            {"command-line": f"hostfwd_add {proto}:{local_address}:{local_port}-{remote_address}:{remote_port}"},
-        )
-
-    def add_port_forward(
-        self, proto: str, local_address: str, local_port: int, remote_address: str, remote_port: int
-    ) -> None:
-        key = (proto, local_address, local_port)
-        if key in self._forwarded_ports:
-            return
-        self._add_port_forward(proto, local_address, local_port, remote_address, remote_port)
-        self._forwarded_ports[key] = (
-            proto,
-            local_address,
-            local_port,
-            remote_address,
-            remote_port,
-        )
-
-    def remove_port_forward(self, proto: str, local_address: str, local_port: int) -> None:
-        del self._forwarded_ports[(proto, local_address, local_port)]
-        self.monitor_command(
-            "human-monitor-command",
-            {"command-line": f"hostfwd_remove {proto}:{local_address}:{local_port}"},
-        )
 
     def _read(self, size: int = 1, timeout: float = 10, max_size: int | None = None) -> bytes:
         assert self._socket
