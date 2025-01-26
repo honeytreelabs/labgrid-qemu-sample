@@ -1,17 +1,23 @@
 from abc import ABC, abstractmethod
+from functools import partial
 
 import attr
-from func import retry_exc
 from driver import BaseQEMUDriver, PortForwarding, QEMUParams
+from func import retry_exc, wait_for
 from labgrid import step
 from labgrid.driver import ShellDriver, SSHDriver
 from labgrid.driver.exception import ExecutionError
 from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
 from labgrid.util import get_free_port
+from network import is_tcp_endpoint_reachable
 from openwrt import enable_dhcp, enable_local_dns_queries
 
 from .status import Status
+
+
+class SetupError(Exception):
+    pass
 
 
 class QEMUBaseStrategy(ABC, Strategy):
@@ -116,5 +122,15 @@ class QEMUBaseStrategy(ABC, Strategy):
 
             assert self.shell
             self.update_network_service()
+            if self.ssh_port_forwarding is None:
+                raise SetupError("SSH portforwarding could not be established")
+            connected = wait_for(
+                partial(
+                    is_tcp_endpoint_reachable, self.ssh_port_forwarding.local.addr, self.ssh_port_forwarding.local.port
+                ),
+                "SSH connection can be established",
+            )
+            if not connected:
+                raise SetupError("Could not connect to SSH port of DUT.")
 
         self.status = status

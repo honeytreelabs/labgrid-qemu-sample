@@ -42,3 +42,19 @@ def get_free_udp_port() -> int:
     with closing(socket.socket(AF_INET, SOCK_DGRAM)) as s:
         s.bind(("", 0))
         return s.getsockname()[1]
+
+
+def is_tcp_endpoint_reachable(host: str, port: int, timeout: float = 1.0) -> bool:
+    """
+    Check if a connection to a given host and port is successful.
+
+    :param host: The hostname or IP address of the server.
+    :param port: The port number to connect to.
+    :param timeout: The number of seconds to wait before timing out.
+    :return: True if the connection is successful, False otherwise.
+    """
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except (socket.timeout, socket.error):
+        return False
