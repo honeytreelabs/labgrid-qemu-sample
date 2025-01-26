@@ -12,7 +12,8 @@ def shell_run(cmd: str, shell: str = "/bin/bash") -> str:
         check=True,
         shell=True,
         executable=shell,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
     )
     return completed_process.stdout
