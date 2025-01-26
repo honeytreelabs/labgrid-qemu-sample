@@ -26,9 +26,7 @@ def wait_for(cond: Callable[[], T], desc: str, delay: float = 0.1, timeout: floa
 S = TypeVar("S")
 
 
-def retry_exc(
-    func: Callable[[], S], exc_type: type[BaseException], desc: str, delay: float = 1, timeout: float = 10
-) -> S:
+def retry_exc(func: Callable[[], S], exc_type: type[Exception], desc: str, delay: float = 1, timeout: float = 10) -> S:
     """Retry a function until it succeeds or a specific exception type is no longer raised.
 
     :param func: A callable to execute, which may raise the specified exception type.
@@ -40,7 +38,7 @@ def retry_exc(
     :raises TimeoutError: If the function does not succeed within the specified timeout.
     """
     start_time = time.time()
-    exc: BaseException | None = None
+    exc: Exception | None = None
     while time.time() - start_time < timeout:
         try:
             return func()
