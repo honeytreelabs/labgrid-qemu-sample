@@ -20,12 +20,6 @@ class Endpoint:
     port: int
 
 
-@dataclass(frozen=True)
-class PortForwarding:
-    local: Endpoint
-    remote: Endpoint
-
-
 PORT_FORWARDING_PATTERN = re.compile(r"TCP\[HOST_FORWARD\]\s+\d+\s+([\w\.-]+)\s+(\d+)\s+([\w\.-]+)\s+(\d+)")
 
 
