@@ -250,10 +250,6 @@ class CustomQEMUDriver(BaseQEMUDriver, ConsoleExpectMixin, Driver, PowerProtocol
 
         self.status = 1
 
-        # Restore port forwards
-        for k, v in self._forwarded_ports.items():
-            self._add_port_forward(k.addr, k.port, v.addr, v.port)
-
         self.monitor_command("cont")
 
     @step()

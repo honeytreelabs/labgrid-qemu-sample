@@ -2,14 +2,14 @@ from abc import ABC, abstractmethod
 from functools import partial
 
 import attr
-from driver import BaseQEMUDriver, PortForwarding, QEMUParams
+from driver import BaseQEMUDriver, QEMUParams
+from driver.base_qemudriver import Endpoint
 from func import retry_exc, wait_for
 from labgrid import step
 from labgrid.driver import ShellDriver, SSHDriver
 from labgrid.driver.exception import ExecutionError
 from labgrid.step import Step
 from labgrid.strategy import Strategy, StrategyError
-from labgrid.util import get_free_port
 from network import is_tcp_endpoint_reachable
 from openwrt import enable_dhcp, enable_local_dns_queries
 
@@ -29,7 +29,7 @@ class QEMUBaseStrategy(ABC, Strategy):
 
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
-        self._ssh_port_forwarding: PortForwarding | None = None
+        self._ssh_local_endpoint: Endpoint | None = None
         self._ssh_remote_port: int = self.ssh.networkservice.port
 
     @abstractmethod
@@ -47,8 +47,8 @@ class QEMUBaseStrategy(ABC, Strategy):
         return str(self.shell.get_ip_addresses()[0].ip)
 
     @property
-    def ssh_port_forwarding(self) -> PortForwarding | None:
-        return self._ssh_port_forwarding
+    def local_ssh_endpoint(self) -> Endpoint | None:
+        return self._ssh_local_endpoint
 
     @step()
     def update_network_service(self) -> None:
@@ -57,27 +57,22 @@ class QEMUBaseStrategy(ABC, Strategy):
         assert self.ssh
         assert self._ssh_remote_port
 
-        new_address: str = retry_exc(self.get_remote_address, ExecutionError, "getting the remote address", timeout=20)
+        dst_address: str = retry_exc(self.get_remote_address, ExecutionError, "getting the remote address", timeout=20)
         networkservice = self.ssh.networkservice
 
-        if networkservice.address != new_address:
+        if networkservice.address != dst_address:
             self.target.deactivate(self.ssh)
 
-            if self._ssh_port_forwarding is not None:
-                self.qemu.remove_port_forward(self._ssh_port_forwarding.local)
+            if self._ssh_local_endpoint is not None:
+                self.qemu.remove_port_forward(self._ssh_local_endpoint)
 
-            local_port = get_free_port()
-            local_address = "127.0.0.1"
-
-            self._ssh_port_forwarding = self.qemu.add_port_forward(
-                local_address,
-                local_port,
-                new_address,
+            self._ssh_local_endpoint = self.qemu.add_hostfwd(
+                dst_address,
                 self._ssh_remote_port,
             )
 
-            networkservice.address = local_address
-            networkservice.port = local_port
+            networkservice.address = self._ssh_local_endpoint.addr
+            networkservice.port = self._ssh_local_endpoint.port
 
     @step(args=["status"])
     def transition(self, status: Status | str, *, step: Step | None = None) -> None:  # type: ignore
@@ -122,12 +117,10 @@ class QEMUBaseStrategy(ABC, Strategy):
 
             assert self.shell
             self.update_network_service()
-            if self.ssh_port_forwarding is None:
+            if self.local_ssh_endpoint is None:
                 raise SetupError("SSH portforwarding could not be established")
             connected = wait_for(
-                partial(
-                    is_tcp_endpoint_reachable, self.ssh_port_forwarding.local.addr, self.ssh_port_forwarding.local.port
-                ),
+                partial(is_tcp_endpoint_reachable, self.local_ssh_endpoint.addr, self.local_ssh_endpoint.port),
                 "SSH connection can be established",
             )
             if not connected:
