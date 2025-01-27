@@ -39,6 +39,8 @@ def parse_port_forwardings(qmp_output: str) -> dict[Endpoint, Endpoint]:
 
 @attr.s(eq=False)
 class BaseQEMUDriver(ConsoleExpectMixin, Driver, ConsoleProtocol):
+    qmp_port: int | None = attr.ib(default=4444, validator=attr.validators.optional(attr.validators.instance_of(int)))
+
     def __attrs_post_init__(self) -> None:
         super().__attrs_post_init__()
         self.txdelay = None
@@ -58,7 +60,7 @@ class BaseQEMUDriver(ConsoleExpectMixin, Driver, ConsoleProtocol):
     def monitor_command(self, command: str, arguments: dict | None = None) -> str:
         """Execute a monitor_command via the QMP"""
         socket_qmp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        socket_qmp.connect(("localhost", 4444))
+        socket_qmp.connect(("localhost", self.qmp_port))
         try:
             qmp_file = socket_qmp.makefile("rw")
 
