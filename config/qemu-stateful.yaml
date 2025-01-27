@@ -8,8 +8,7 @@ targets:
         username: root
 
     drivers:
-    - StatefulQEMUDriver:
-        qmp_port: 5555
+    - StatefulQEMUDriver: {}
     - ShellDriver:
         login_prompt: 'Please press Enter to activate this console.'
         username: 'root'

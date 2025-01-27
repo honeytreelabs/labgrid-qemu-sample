@@ -21,6 +21,8 @@ from pexpect import TIMEOUT
 from process import kill_process
 from qmp import QMPMonitor
 
+from driver.params import get_qmp_port
+
 from .base_qemudriver import BaseQEMUDriver
 
 
@@ -224,7 +226,7 @@ class CustomQEMUDriver(BaseQEMUDriver, ConsoleExpectMixin, Driver, PowerProtocol
 
         cmd.append("-qmp")
         # cmd.append("stdio")
-        cmd.append(f"tcp:localhost:{self.qmp_port},server=on,wait=off")
+        cmd.append(f"tcp:localhost:{get_qmp_port()},server=on,wait=off")
 
         cmd.append("-chardev")
         cmd.append("socket,id=serialsocket,host=0.0.0.0,port=54321,server=on,wait=off")
@@ -276,7 +278,7 @@ class CustomQEMUDriver(BaseQEMUDriver, ConsoleExpectMixin, Driver, PowerProtocol
     def monitor_command(self, command: str, arguments: dict | None = None) -> str:
         """Execute a monitor_command via the QMP"""
         socket_qmp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        socket_qmp.connect(("localhost", self.qmp_port))
+        socket_qmp.connect(("localhost", get_qmp_port()))
         try:
             qmp_file = socket_qmp.makefile("rw")
 
